@@ -1,8 +1,10 @@
 import { MetricEntry, TimeRange } from './types';
 
 export async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+  const base = import.meta.env.BASE_URL || '/';
+  const url = path.startsWith('/') ? `${base.replace(/\/$/, '')}${path}` : path;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${url}`);
   return res.json();
 }
 

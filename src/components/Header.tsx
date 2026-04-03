@@ -23,57 +23,79 @@ export default function Header({ me, activeTab, onTabChange }: HeaderProps) {
   const { dark, toggle } = useTheme();
 
   return (
-    <header style={{ backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--border)' }}
-            className="sticky top-0 z-50 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <header
+      className="sticky top-0 z-50"
+      style={{
+        backgroundColor: dark ? 'rgba(15,15,15,0.85)' : 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top bar */}
         <div className="flex items-center justify-between h-16">
-          <h1 className="font-display text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Sam's Health
-          </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-baseline gap-3">
+            <h1
+              className="font-display text-xl sm:text-2xl font-semibold tracking-tight"
+              style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
+            >
+              Sam's Health
+            </h1>
             {me && (
-              <div className="hidden sm:flex items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                <span className="px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  {(me.totalRecords / 1000000).toFixed(1)}M records
-                </span>
-                <span className="px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  {me.uniqueTypes} types
-                </span>
-                <span className="px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  2017–2026
-                </span>
-              </div>
+              <span
+                className="hidden md:inline text-xs font-medium tracking-widest uppercase"
+                style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}
+              >
+                {(me.totalRecords / 1000000).toFixed(1)}M records · {me.uniqueTypes} types · 2017–2026
+              </span>
             )}
-            <button
-              onClick={toggle}
-              className="p-2 rounded-lg transition-colors hover:opacity-80"
-              style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-              aria-label="Toggle theme"
-            >
-              {dark ? '☀️' : '🌙'}
-            </button>
           </div>
+          <button
+            onClick={toggle}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200"
+            style={{
+              backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+              color: 'var(--text-secondary)',
+            }}
+            aria-label="Toggle theme"
+          >
+            <span className="text-sm">{dark ? '☀️' : '🌙'}</span>
+          </button>
         </div>
-        {/* Tab nav */}
-        <nav className="flex overflow-x-auto gap-1 pb-0 -mb-px scrollbar-none" style={{ scrollbarWidth: 'none' }}>
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500'
-                  : 'border-transparent hover:border-gray-300'
-              }`}
-              style={{
-                color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-secondary)',
-              }}
-            >
-              <span className="text-base">{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+
+        {/* Tab navigation — Sanono minimal style */}
+        <nav
+          className="flex overflow-x-auto -mb-px"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className="relative flex items-center gap-1.5 px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200"
+                style={{
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                <span className="text-sm sm:text-base opacity-80">{tab.icon}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                {/* Active indicator — thin elegant line */}
+                <span
+                  className="absolute bottom-0 left-4 right-4 h-[1.5px] rounded-full transition-all duration-300"
+                  style={{
+                    backgroundColor: isActive ? 'var(--accent)' : 'transparent',
+                    opacity: isActive ? 1 : 0,
+                    transform: isActive ? 'scaleX(1)' : 'scaleX(0)',
+                  }}
+                />
+              </button>
+            );
+          })}
         </nav>
       </div>
     </header>
