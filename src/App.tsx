@@ -9,6 +9,7 @@ import BodyTab from './pages/BodyTab';
 import WorkoutsTab from './pages/WorkoutsTab';
 import MobilityTab from './pages/MobilityTab';
 import EnvironmentTab from './pages/EnvironmentTab';
+import AnalysisTab from './pages/AnalysisTab';
 import AllMetricsTab from './pages/AllMetricsTab';
 import { MeData } from './types';
 import { fetchJson } from './utils';
@@ -24,6 +25,7 @@ function Dashboard() {
   const renderTab = () => {
     switch (activeTab) {
       case 'overview': return <OverviewTab />;
+      case 'analysis': return <AnalysisTab />;
       case 'heart': return <HeartTab />;
       case 'activity': return <ActivityTab />;
       case 'sleep': return <SleepTab />;

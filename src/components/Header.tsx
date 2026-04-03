@@ -3,6 +3,7 @@ import { MeData, TabConfig } from '../types';
 
 const TABS: TabConfig[] = [
   { id: 'overview', label: 'Overview', icon: '' },
+  { id: 'analysis', label: 'Health Analysis', icon: '' },
   { id: 'heart', label: 'Heart', icon: '' },
   { id: 'activity', label: 'Activity', icon: '' },
   { id: 'sleep', label: 'Sleep', icon: '' },
