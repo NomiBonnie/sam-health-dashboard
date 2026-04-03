@@ -128,11 +128,11 @@
     "firstDate": "2020-06-25",
     "lastDate": "2026-03-17",
     "daysWithData": 2042,
-    "overallAvg": 0.29,
-    "overallMin": 0.15,
-    "overallMax": 0.4,
-    "latestValue": 0.34,
-    "recent30dAvg": 0.3
+    "overallAvg": 29.0,
+    "overallMin": 15.0,
+    "overallMax": 40.0,
+    "latestValue": 34.0,
+    "recent30dAvg": 30.0
   },
   {
     "type": "HKQuantityTypeIdentifierEnvironmentalAudioExposure",
@@ -176,11 +176,11 @@
     "firstDate": "2020-06-25",
     "lastDate": "2026-03-17",
     "daysWithData": 1949,
-    "overallAvg": 0.04,
+    "overallAvg": 4.0,
     "overallMin": 0.0,
-    "overallMax": 1.0,
+    "overallMax": 100.0,
     "latestValue": 0.0,
-    "recent30dAvg": 0.03
+    "recent30dAvg": 3.0
   },
   {
     "type": "HKQuantityTypeIdentifierRespiratoryRate",
@@ -411,11 +411,11 @@
     "firstDate": "2021-09-23",
     "lastDate": "2026-03-04",
     "daysWithData": 232,
-    "overallAvg": 0.93,
-    "overallMin": 0.83,
-    "overallMax": 1.0,
-    "latestValue": 0.89,
-    "recent30dAvg": 0.92
+    "overallAvg": 93.0,
+    "overallMin": 83.0,
+    "overallMax": 100.0,
+    "latestValue": 89.0,
+    "recent30dAvg": 92.0
   },
   {
     "type": "HKQuantityTypeIdentifierSwimmingStrokeCount",
@@ -520,11 +520,11 @@
     "firstDate": "2021-03-09",
     "lastDate": "2021-03-09",
     "daysWithData": 1,
-    "overallAvg": 0.28,
-    "overallMin": 0.28,
-    "overallMax": 0.28,
-    "latestValue": 0.28,
-    "recent30dAvg": 0.28
+    "overallAvg": 28.0,
+    "overallMin": 28.0,
+    "overallMax": 28.0,
+    "latestValue": 28.0,
+    "recent30dAvg": 28.0
   },
   {
     "type": "HKQuantityTypeIdentifierLeanBodyMass",

@@ -120,7 +120,10 @@ export const SUM_METRICS = new Set([
 ]);
 
 // Metrics stored as 0-1 fraction that should display as percentage
-export const FRACTION_TO_PCT = new Set(['OxygenSaturation']);
+export const FRACTION_TO_PCT = new Set([
+  'OxygenSaturation', 'BodyFatPercentage', 'WalkingDoubleSupportPercentage',
+  'WalkingAsymmetryPercentage', 'AppleWalkingSteadiness',
+]);
 
 export function transformValue(shortName: string, value: number): number {
   if (FRACTION_TO_PCT.has(shortName)) return Math.round(value * 1000) / 10; // 0.96 → 96.0
