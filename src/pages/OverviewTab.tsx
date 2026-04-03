@@ -33,7 +33,7 @@ export default function OverviewTab() {
     <div className="space-y-8">
       {/* Key metrics grid */}
       <div>
-        <h2 className="font-display text-xl uppercase tracking-luxury mb-4" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>
+        <h2 className="text-xl font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
           Key Metrics
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -45,18 +45,18 @@ export default function OverviewTab() {
             const trendIcon = trendDir === 'up' ? '↑' : trendDir === 'down' ? '↓' : '—';
             return (
               <div key={m.shortName} className="card p-5">
-                <div className="text-[10px] font-light uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
+                <div className="text-xs font-light tracking-luxury uppercase mb-2 text-brand-400 dark:text-brand-600">
                   {getMetricDisplayName(m.shortName)}
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-3xl font-light text-brand-900 dark:text-brand-100">
                     {displayLatest < 100 ? displayLatest.toFixed(1) : Math.round(displayLatest).toLocaleString()}
                   </span>
-                  <span className="text-xs font-light" style={{ color: 'var(--text-muted)' }}>{getMetricUnit(m.shortName)}</span>
+                  <span className="text-xs font-light text-brand-500">{getMetricUnit(m.shortName)}</span>
                 </div>
-                <div className="text-[11px] font-light mt-2 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <div className="text-xs font-light mt-2 flex items-center gap-2 text-brand-600 dark:text-brand-400">
                   <span>30d avg: {displayRecent.toFixed(1)}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>{trendIcon}</span>
+                  <span className="text-brand-500">{trendIcon}</span>
                 </div>
               </div>
             );
@@ -66,22 +66,27 @@ export default function OverviewTab() {
 
       {/* Activity Rings */}
       <div>
-        <h2 className="font-display text-xl uppercase tracking-luxury mb-4" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>
+        <h2 className="text-xl font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
           30-Day Goal Completion
         </h2>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Move', pct: ringStats.energy, bar: '#171717' },
-            { label: 'Exercise', pct: ringStats.exercise, bar: '#525252' },
-            { label: 'Stand', pct: ringStats.stand, bar: '#737373' },
+            { label: 'Move', pct: ringStats.energy, bar: 'bg-brand-900 dark:bg-brand-100' },
+            { label: 'Exercise', pct: ringStats.exercise, bar: 'bg-brand-700 dark:bg-brand-300' },
+            { label: 'Stand', pct: ringStats.stand, bar: 'bg-brand-500' },
           ].map(r => (
             <div key={r.label} className="card p-6">
-              <div className="text-[10px] font-light uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
+              <div className="text-xs font-light tracking-luxury uppercase mb-3 text-brand-400 dark:text-brand-600">
                 {r.label}
               </div>
-              <div className="text-4xl font-light mb-3" style={{ color: 'var(--text-primary)' }}>{r.pct}<span className="text-2xl">%</span></div>
-              <div className="h-1 w-full" style={{ backgroundColor: 'var(--border)' }}>
-                <div className="h-full transition-all duration-500" style={{ width: `${r.pct}%`, backgroundColor: r.bar }} />
+              <div className="text-4xl font-light mb-3 text-brand-900 dark:text-brand-100">
+                {r.pct}<span className="text-2xl">%</span>
+              </div>
+              <div className="h-1 w-full bg-brand-200 dark:bg-brand-800">
+                <div 
+                  className={`h-full transition-all duration-500 ${r.bar}`}
+                  style={{ width: `${r.pct}%` }}
+                />
               </div>
             </div>
           ))}
@@ -90,23 +95,23 @@ export default function OverviewTab() {
 
       {/* Insights */}
       <div className="card p-6">
-        <h3 className="font-display text-lg uppercase tracking-luxury mb-4" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>
+        <h3 className="text-lg font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
           Recent Trends
         </h3>
-        <div className="space-y-3 text-sm font-light" style={{ color: 'var(--text-secondary)' }}>
+        <div className="space-y-3 text-sm font-light text-brand-600 dark:text-brand-400 leading-relaxed">
           {keyMetrics.slice(0, 4).map(m => {
             const r30 = m.recent30dAvg;
             const all = m.overallAvg;
             const diff = ((r30 - all) / all * 100);
             const direction = diff > 0 ? 'higher' : 'lower';
             return (
-              <p key={m.shortName} className="leading-relaxed">
-                <span className="uppercase text-[11px] tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              <p key={m.shortName}>
+                <span className="text-xs tracking-luxury uppercase text-brand-500">
                   {getMetricDisplayName(m.shortName)}
                 </span>
                 {' · '}
-                30d avg <strong style={{ color: 'var(--text-primary)', fontWeight: 400 }}>{r30.toFixed(1)}</strong> is{' '}
-                <strong style={{ color: Math.abs(diff) > 5 ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: 400 }}>
+                30d avg <strong className="font-medium text-brand-900 dark:text-brand-100">{r30.toFixed(1)}</strong> is{' '}
+                <strong className={`font-medium ${Math.abs(diff) > 5 ? 'text-brand-900 dark:text-brand-100' : 'text-brand-600 dark:text-brand-400'}`}>
                   {Math.abs(diff).toFixed(1)}% {direction}
                 </strong>{' '}
                 than overall ({all.toFixed(1)})

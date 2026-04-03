@@ -37,13 +37,17 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen bg-brand-50 dark:bg-brand-950">
       <Header me={me} activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         {renderTab()}
       </main>
-      <footer className="text-center py-8 text-[10px] font-light uppercase tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.15em' }}>
-        Apple Health Export · {me?.exportDate?.slice(0, 10) || ''}
+      <footer className="border-t border-brand-100 dark:border-brand-900 py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-xs text-brand-400 dark:text-brand-600 font-light tracking-luxury uppercase">
+            Apple Health Export · {me?.exportDate?.slice(0, 10) || ''}
+          </p>
+        </div>
       </footer>
     </div>
   );

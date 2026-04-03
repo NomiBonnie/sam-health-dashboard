@@ -1,108 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Cormorant+Garamond:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-:root {
-  --brand-50: #fafafa;
-  --brand-100: #f5f5f5;
-  --brand-200: #e5e7eb;
-  --brand-900: #171717;
-  --brand-950: #0a0a0a;
-  
-  --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --bg-card: rgba(255, 255, 255, 0.6);
-  --text-primary: #0a0a0a;
-  --text-secondary: #525252;
-  --text-muted: #737373;
-  --border: #e5e7eb;
-  --accent: #171717;
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+
+  --color-brand-50: #fafafa;
+  --color-brand-100: #f5f5f5;
+  --color-brand-200: #e5e5e5;
+  --color-brand-300: #d4d4d4;
+  --color-brand-400: #a3a3a3;
+  --color-brand-500: #737373;
+  --color-brand-600: #525252;
+  --color-brand-700: #404040;
+  --color-brand-800: #262626;
+  --color-brand-900: #171717;
+  --color-brand-950: #0a0a0a;
+
+  --tracking-luxury: 0.15em;
 }
 
-.dark {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #171717;
-  --bg-card: rgba(10, 10, 10, 0.8);
-  --text-primary: #f5f5f5;
-  --text-secondary: #a3a3a3;
-  --text-muted: #737373;
-  --border: #262626;
-  --accent: #f5f5f5;
+@layer base {
+  body {
+    @apply font-sans antialiased text-brand-900 bg-brand-50;
+    overflow-x: clip;
+  }
+  .dark body {
+    @apply text-brand-100 bg-brand-950;
+  }
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 300;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: background-color 0.3s, color 0.3s;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.font-display {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-weight: 300;
-  letter-spacing: 0.6px;
-}
-
-.tracking-luxury {
-  letter-spacing: 0.05em;
-}
-
+/* Card component */
 .card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  @apply border border-brand-200 bg-brand-50/80 backdrop-blur-xl transition-colors;
+}
+.dark .card {
+  @apply border-brand-800 bg-brand-950/80;
 }
 
-.card:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-.text-primary { color: var(--text-primary); }
-.text-secondary { color: var(--text-secondary); }
-.text-muted { color: var(--text-muted); }
-.bg-primary { background-color: var(--bg-primary); }
-.bg-secondary { background-color: var(--bg-secondary); }
-.bg-card { background-color: var(--bg-card); }
-.border-theme { border-color: var(--border); }
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 0; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-/* Recharts customization */
+/* Recharts overrides */
 .recharts-tooltip-wrapper { outline: none !important; }
-.recharts-default-tooltip {
-  background-color: var(--bg-card) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 0 !important;
-  padding: 12px 16px !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-}
-.recharts-tooltip-label { 
-  color: var(--text-primary) !important; 
-  font-weight: 400 !important;
-  font-size: 11px !important;
-  letter-spacing: 0.02em !important;
-  text-transform: uppercase !important;
-  margin-bottom: 4px !important;
-}
-.recharts-tooltip-item { 
-  color: var(--text-secondary) !important;
-  font-weight: 300 !important;
-  font-size: 13px !important;
-}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-brand-300 rounded-full; }
+.dark ::-webkit-scrollbar-thumb { @apply bg-brand-700; }
