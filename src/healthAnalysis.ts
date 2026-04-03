@@ -545,3 +545,215 @@ export function getLevelBg(level: MetricAssessment['level']): string {
     case 'warning': return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
   }
 }
+
+// ============================================================
+// DETAILED ANALYSIS (1 metric test)
+// ============================================================
+
+export interface DetailedAnalysis {
+  clinicalSignificance: string;
+  healthImplications: string;
+  actionableIntervention: string;
+}
+
+export function getDetailedAnalysis(
+  metricName: string,
+  value: number,
+  lang: 'en' | 'zh' = 'en'
+): DetailedAnalysis | null {
+  let significance = '';
+  let implications = '';
+  let intervention = '';
+
+  if (metricName === 'RestingHeartRate') {
+    significance = lang === 'zh'
+      ? '静息心率反映心血管健康和自主神经平衡。高于 60 bpm 的每 10 次/分钟增加与全因死亡率增加约 17% 相关（Framingham 心脏研究）。较低的静息心率表明心脏效率更高。'
+      : 'Resting heart rate (RHR) reflects cardiovascular fitness and autonomic balance. Each 10 bpm increase above 60 bpm is associated with ~17% higher all-cause mortality risk (Framingham Heart Study). Lower RHR indicates better cardiac efficiency.';
+
+    if (lang === 'zh') {
+      implications = value > 80 ? '心血管疾病风险比最佳范围高 2.3 倍（AHA 2024）' : value > 70 ? '中等心血管负荷' : '处于健康范围';
+    } else {
+      implications = value > 80 ? '2.3x higher CVD risk vs optimal range (AHA 2024)' : value > 70 ? 'Moderate cardiovascular load' : 'Within healthy range';
+    }
+
+    if (value > 75) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每周 3 次，每次 20 分钟快走。第 3-4 周：增加 2 次 HIIT（20 秒冲刺 / 40 秒休息 × 8 轮）。监测每周平均静息心率。'
+        : 'Week 1-2: 20min brisk walk 3x/week. Week 3-4: Add 2x HIIT (20s sprint / 40s rest × 8 rounds). Monitor weekly avg RHR.';
+    } else {
+      intervention = lang === 'zh'
+        ? '保持当前活动量。考虑增加 1 次二区有氧训练。'
+        : 'Maintain current activity. Consider adding 1x zone 2 cardio.';
+    }
+  } else if (metricName === 'HeartRateVariabilitySDNN') {
+    significance = lang === 'zh'
+      ? 'HRV SDNN 测量 24 小时内心跳间隔变异性。低 HRV（<30ms）预示心脏事件，与慢性压力、过度训练和睡眠质量差有关。较高的 HRV 表明副交感神经张力更好。'
+      : 'HRV SDNN measures beat-to-beat heart rate variability over 24h. Low HRV (<30ms) predicts cardiac events and is linked to chronic stress, overtraining, and poor sleep quality. Higher HRV indicates better parasympathetic tone.';
+
+    if (lang === 'zh') {
+      implications = value < 20 ? '心脏事件风险升高，建议咨询心脏科医生' : value < 30 ? '检测到自主神经失衡' : '自主神经功能健康';
+    } else {
+      implications = value < 20 ? 'Elevated cardiac event risk. Consult cardiologist.' : value < 30 ? 'Autonomic imbalance detected' : 'Healthy autonomic function';
+    }
+
+    if (value < 30) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：优先保证 7-8 小时睡眠，下午 2 点后减少咖啡因。第 3-4 周：每天增加 10 分钟呼吸训练（4-7-8 技巧）。每周跟踪 HRV。'
+        : 'Week 1-2: 7-8h sleep priority, reduce caffeine after 2pm. Week 3-4: Add 10min daily breathwork (4-7-8 technique). Track HRV weekly.';
+    } else {
+      intervention = lang === 'zh'
+        ? '保持睡眠质量。考虑每周 3 次冥想。'
+        : 'Maintain sleep quality. Consider meditation 3x/week.';
+    }
+  } else if (metricName === 'VO2Max') {
+    significance = lang === 'zh'
+      ? '最大摄氧量是心肺健康的黄金标准。每增加 1 mL/kg/min，全因死亡率降低约 15%（Cooper Clinic）。优秀的最大摄氧量（40-49 岁男性 >42）预示长寿。'
+      : 'VO₂ Max is the gold standard for cardiorespiratory fitness. Each 1 mL/kg/min increase reduces all-cause mortality by ~15% (Cooper Clinic). Superior VO₂ Max (>42 for 40-49y males) predicts longevity.';
+
+    if (lang === 'zh') {
+      implications = value < 30 ? '心肺健康差，死亡风险比健康同龄人高 2 倍' : value < 35 ? '低于平均水平' : '良好至优秀';
+    } else {
+      implications = value < 30 ? 'Poor cardiorespiratory fitness, 2x mortality risk vs fit peers' : value < 35 ? 'Below average fitness' : 'Good to excellent fitness';
+    }
+
+    if (value < 35) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每周 2 次，每次 30 分钟二区有氧（最大心率 60-70%）。第 3-4 周：增加 1 次最大摄氧量间歇（4 分钟 @ 最大心率 90% / 3 分钟休息 × 4）。8 周后重测。'
+        : 'Week 1-2: 2x 30min zone 2 cardio (60-70% max HR). Week 3-4: Add 1x VO₂ Max interval (4min @ 90% max HR / 3min rest × 4). Retest in 8 weeks.';
+    } else {
+      intervention = lang === 'zh'
+        ? '保持每周 2-3 次 HIIT 或节奏跑。'
+        : 'Maintain 2-3x/week HIIT or tempo runs.';
+    }
+  } else if (metricName === 'OxygenSaturation') {
+    significance = lang === 'zh'
+      ? '血氧饱和度衡量血红蛋白携氧能力。正常为 95-100%。低于 90% 为低氧血症，可能提示呼吸或心血管问题。'
+      : 'Oxygen saturation measures hemoglobin oxygen-carrying capacity. Normal: 95-100%. Below 90% indicates hypoxemia, may signal respiratory or cardiovascular issues.';
+
+    if (lang === 'zh') {
+      implications = value < 92 ? '低氧血症，需立即就医' : value < 95 ? '低于正常，监测慢性缺氧' : '正常范围';
+    } else {
+      implications = value < 92 ? 'Hypoxemia detected. Seek immediate care.' : value < 95 ? 'Below normal. Monitor for chronic hypoxia.' : 'Normal range';
+    }
+
+    if (value < 95) {
+      intervention = lang === 'zh'
+        ? '咨询呼吸科或心脏科医生。考虑肺功能测试。避免高海拔环境。'
+        : 'Consult pulmonologist or cardiologist. Consider pulmonary function test. Avoid high altitude.';
+    } else {
+      intervention = lang === 'zh' ? '保持正常呼吸健康。' : 'Maintain normal respiratory health.';
+    }
+  } else if (metricName === 'BodyMassIndex') {
+    significance = lang === 'zh'
+      ? 'BMI 是体重相对身高的指标。WHO 标准：18.5-24.9 为正常。BMI >30 与 2 型糖尿病、心血管疾病风险显著升高相关。'
+      : 'BMI measures weight relative to height. WHO standard: 18.5-24.9 is normal. BMI >30 is associated with significantly higher risk of type 2 diabetes and CVD.';
+
+    if (lang === 'zh') {
+      implications = value > 30 ? '肥胖，代谢综合征风险高' : value > 27 ? '超重，建议减重' : '正常至稍微超重';
+    } else {
+      implications = value > 30 ? 'Obese. High metabolic syndrome risk.' : value > 27 ? 'Overweight. Weight loss recommended.' : 'Normal to slightly overweight';
+    }
+
+    if (value > 27) {
+      intervention = lang === 'zh'
+        ? '第 1-4 周：目标每周减 0.5kg（热量赤字 500kcal/天）。增加蛋白质摄入（体重 kg × 1.6g）。每周 3 次力量训练。'
+        : 'Week 1-4: Target 0.5kg/week loss (500kcal/day deficit). Increase protein (1.6g per kg bodyweight). 3x/week strength training.';
+    } else {
+      intervention = lang === 'zh' ? '保持当前体重。' : 'Maintain current weight.';
+    }
+  } else if (metricName === 'BodyFatPercentage') {
+    significance = lang === 'zh'
+      ? '体脂率比 BMI 更准确反映代谢健康。40-49 岁男性理想范围 10-18%。高体脂（>25%）与胰岛素抵抗和炎症相关。'
+      : 'Body fat % is a better metabolic health marker than BMI. Ideal for 40-49y males: 10-18%. High body fat (>25%) is linked to insulin resistance and inflammation.';
+
+    if (lang === 'zh') {
+      implications = value > 30 ? '肥胖级体脂，代谢风险高' : value > 25 ? '超出健康范围' : '健康范围';
+    } else {
+      implications = value > 30 ? 'Obese-level body fat. High metabolic risk.' : value > 25 ? 'Above healthy range' : 'Healthy range';
+    }
+
+    if (value > 25) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每周 3 次全身力量训练（大肌群复合动作）。第 3-4 周：增加 2 次 HIIT。目标 6 个月内降至 18-22%。'
+        : 'Week 1-2: 3x/week full-body strength training (compound lifts). Week 3-4: Add 2x HIIT. Target 18-22% in 6 months.';
+    } else {
+      intervention = lang === 'zh' ? '保持力量训练和有氧运动。' : 'Maintain strength + cardio.';
+    }
+  } else if (metricName === 'StepCount') {
+    significance = lang === 'zh'
+      ? '每日步数是日常活动量的简单指标。>10,000 步/天与全因死亡率降低 50% 相关（JAMA 2020）。每增加 1,000 步降低死亡率约 6%。'
+      : 'Daily steps are a simple measure of physical activity. >10,000 steps/day is associated with 50% lower all-cause mortality (JAMA 2020). Each 1,000-step increase reduces mortality ~6%.';
+
+    if (lang === 'zh') {
+      implications = value < 5000 ? '久坐生活方式，心血管风险高' : value < 7500 ? '低于推荐水平' : '达到健康目标';
+    } else {
+      implications = value < 5000 ? 'Sedentary lifestyle. High CVD risk.' : value < 7500 ? 'Below recommended level' : 'Meeting health goals';
+    }
+
+    if (value < 7500) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每周增加 500 步。第 3-4 周：增加 1,000 步。使用计步器追踪。目标 12 周内达到 10,000 步。'
+        : 'Week 1-2: Increase by 500 steps/week. Week 3-4: Increase by 1,000 steps/week. Use step tracker. Target 10,000 in 12 weeks.';
+    } else {
+      intervention = lang === 'zh' ? '保持当前步数。' : 'Maintain current step count.';
+    }
+  } else if (metricName === 'SleepDuration') {
+    significance = lang === 'zh'
+      ? '睡眠时长影响代谢、免疫和心血管健康。成年人理想睡眠 7-8 小时。<6 小时与肥胖、糖尿病和全因死亡率升高相关（NSF 2024）。'
+      : 'Sleep duration affects metabolism, immunity, and cardiovascular health. Ideal for adults: 7-8h. <6h is linked to obesity, diabetes, and higher all-cause mortality (NSF 2024).';
+
+    if (lang === 'zh') {
+      implications = value < 6 ? '严重睡眠不足，多系统健康风险' : value < 6.5 ? '睡眠不足' : '健康睡眠时长';
+    } else {
+      implications = value < 6 ? 'Severe sleep deprivation. Multi-system health risk.' : value < 6.5 ? 'Insufficient sleep' : 'Healthy sleep duration';
+    }
+
+    if (value < 6.5) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：提前 30 分钟上床，关闭屏幕。第 3-4 周：固定作息时间（包括周末）。睡前 2 小时避免咖啡因和酒精。'
+        : 'Week 1-2: Go to bed 30min earlier, screens off. Week 3-4: Fixed sleep schedule (incl. weekends). Avoid caffeine/alcohol 2h before bed.';
+    } else {
+      intervention = lang === 'zh' ? '保持睡眠习惯。' : 'Maintain sleep habits.';
+    }
+  } else if (metricName === 'WalkingSpeed') {
+    significance = lang === 'zh'
+      ? '步行速度是整体健康和长寿的强预测因子。步速 <4.0 km/h 与全因死亡率升高相关。快速步行（>5.5 km/h）预示更长寿命（Cooper Clinic）。'
+      : 'Walking speed is a strong predictor of overall health and longevity. Gait speed <4.0 km/h is associated with higher all-cause mortality. Brisk walking (>5.5 km/h) predicts longer lifespan (Cooper Clinic).';
+
+    if (lang === 'zh') {
+      implications = value < 4.0 ? '步速慢，健康风险升高' : value < 4.8 ? '低于平均水平' : '健康步速';
+    } else {
+      implications = value < 4.0 ? 'Slow gait. Elevated health risk.' : value < 4.8 ? 'Below average gait speed' : 'Healthy gait speed';
+    }
+
+    if (value < 4.8) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每天 10 分钟快走练习。第 3-4 周：增加至 20 分钟。目标步速 >5.0 km/h。每周测量 1 次。'
+        : 'Week 1-2: 10min daily brisk walking drills. Week 3-4: Increase to 20min. Target >5.0 km/h. Measure 1x/week.';
+    } else {
+      intervention = lang === 'zh' ? '保持步速。' : 'Maintain gait speed.';
+    }
+  } else if (metricName === 'AppleWalkingSteadiness') {
+    significance = lang === 'zh'
+      ? '步行稳定性反映平衡和跌倒风险。低稳定性（<80%）与未来 12 个月内跌倒风险增加相关。稳定性由 Apple Watch 通过加速度计和陀螺仪测量。'
+      : 'Walking steadiness reflects balance and fall risk. Low steadiness (<80%) is associated with increased fall risk in the next 12 months. Measured by Apple Watch via accelerometer and gyroscope.';
+
+    if (lang === 'zh') {
+      implications = value < 80 ? '跌倒风险高，需评估' : value < 90 ? '稳定性稍低' : '步行稳定性良好';
+    } else {
+      implications = value < 80 ? 'High fall risk. Assessment needed.' : value < 90 ? 'Slightly reduced steadiness' : 'Good walking steadiness';
+    }
+
+    if (value < 90) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每天 5 分钟单腿站立练习（每侧 30 秒 × 5 组）。第 3-4 周：增加平衡板或瑜伽。咨询物理治疗师。'
+        : 'Week 1-2: 5min daily single-leg stance (30s each side × 5 sets). Week 3-4: Add balance board or yoga. Consult physiotherapist.';
+    } else {
+      intervention = lang === 'zh' ? '保持平衡训练。' : 'Maintain balance training.';
+    }
+  } else {
+    return null;
+  }
+
+  return { clinicalSignificance: significance, healthImplications: implications, actionableIntervention: intervention };
+}

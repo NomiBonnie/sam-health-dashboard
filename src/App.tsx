@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThemeProvider } from './ThemeContext';
+import { LanguageProvider } from './LanguageContext';
 import Header from './components/Header';
 import OverviewTab from './pages/OverviewTab';
 import HeartTab from './pages/HeartTab';
@@ -58,7 +59,9 @@ function Dashboard() {
 export default function App() {
   return (
     <ThemeProvider>
-      <Dashboard />
+      <LanguageProvider>
+        <Dashboard />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

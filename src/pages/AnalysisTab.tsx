@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry, SleepEntry, MetricEntry } from '../types';
 import { fetchJson, getMetricDisplayName } from '../utils';
+import { useLanguage } from '../LanguageContext';
 import {
   assessMetric, calculateHealthScore, getRiskLevel, getLevelColor, getLevelBg,
   calculatePercentile, getPercentileLabel, detectTrend, analyzeSleepStages,
-  analyzeActivityRings, type MetricAssessment, type TrendResult, type SleepStageAnalysis, type ActivityBreakdown,
+  analyzeActivityRings, getDetailedAnalysis,
+  type MetricAssessment, type TrendResult, type SleepStageAnalysis, type ActivityBreakdown,
 } from '../healthAnalysis';
 
 function TrendBadge({ trend }: { trend: TrendResult }) {
-  const colors = {
+  const colors: Record<string, string> = {
     improving: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
     declining: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
     stable: 'bg-brand-100 dark:bg-brand-800 text-brand-600 dark:text-brand-400',
@@ -20,12 +22,12 @@ function TrendBadge({ trend }: { trend: TrendResult }) {
   );
 }
 
-function PercentileBar({ percentile }: { percentile: number }) {
+function PercentileBar({ percentile, label }: { percentile: number; label: string }) {
   const color = percentile >= 75 ? 'bg-green-500' : percentile >= 50 ? 'bg-blue-500' : percentile >= 25 ? 'bg-yellow-500' : 'bg-red-500';
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-brand-500 mb-1">
-        <span>Percentile vs 43y males</span>
+        <span>{label}</span>
         <span className="font-medium">{getPercentileLabel(percentile)} ({percentile}th)</span>
       </div>
       <div className="w-full h-2 bg-brand-200 dark:bg-brand-700 rounded-full overflow-hidden">
@@ -35,13 +37,10 @@ function PercentileBar({ percentile }: { percentile: number }) {
   );
 }
 
-function SleepBreakdownCard({ stages }: { stages: SleepStageAnalysis[] }) {
+function SleepBreakdownCard({ stages, title, avgLabel }: { stages: SleepStageAnalysis[]; title: string; avgLabel: string }) {
   if (stages.length === 0) return null;
   const stageColors: Record<string, string> = {
-    'Deep Sleep': 'bg-indigo-500',
-    'REM Sleep': 'bg-cyan-500',
-    'Core Sleep': 'bg-blue-400',
-    'Awake': 'bg-orange-400',
+    'Deep Sleep': 'bg-indigo-500', 'REM Sleep': 'bg-cyan-500', 'Core Sleep': 'bg-blue-400', 'Awake': 'bg-orange-400',
   };
   const stageEmoji: Record<string, string> = {
     'Deep Sleep': '🌙', 'REM Sleep': '💭', 'Core Sleep': '😴', 'Awake': '👀',
@@ -50,7 +49,7 @@ function SleepBreakdownCard({ stages }: { stages: SleepStageAnalysis[] }) {
   return (
     <div className="card p-6">
       <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-4">
-        🛏️ Sleep Stage Breakdown <span className="text-xs font-light normal-case tracking-normal text-brand-500">(30-day avg)</span>
+        🛏️ {title} <span className="text-xs font-light normal-case tracking-normal text-brand-500">{avgLabel}</span>
       </h3>
       <div className="space-y-4">
         {stages.map(s => {
@@ -83,18 +82,18 @@ function SleepBreakdownCard({ stages }: { stages: SleepStageAnalysis[] }) {
   );
 }
 
-function ActivityRingsCard({ rings }: { rings: ActivityBreakdown[] }) {
+function ActivityRingsCard({ rings, title, avgLabel }: { rings: ActivityBreakdown[]; title: string; avgLabel: string }) {
   if (rings.length === 0) return null;
 
   return (
     <div className="card p-6">
       <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-4">
-        ⌚ Activity Rings <span className="text-xs font-light normal-case tracking-normal text-brand-500">(30-day avg)</span>
+        ⌚ {title} <span className="text-xs font-light normal-case tracking-normal text-brand-500">{avgLabel}</span>
       </h3>
       <div className="space-y-4">
         {rings.map(r => {
-          const trendColors = { improving: 'text-green-600', declining: 'text-red-500', stable: 'text-brand-500' };
-          const trendArrow = { improving: '↑', declining: '↓', stable: '→' };
+          const trendColors: Record<string, string> = { improving: 'text-green-600', declining: 'text-red-500', stable: 'text-brand-500' };
+          const trendArrow: Record<string, string> = { improving: '↑', declining: '↓', stable: '→' };
           return (
             <div key={r.metric} className="flex items-center gap-4">
               <span className="text-xl w-8 text-center">{r.icon}</span>
@@ -123,18 +122,19 @@ function ActivityRingsCard({ rings }: { rings: ActivityBreakdown[] }) {
 }
 
 export default function AnalysisTab() {
+  const { lang, t } = useLanguage();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [sleep, setSleep] = useState<SleepEntry[]>([]);
   const [metricData, setMetricData] = useState<Record<string, MetricEntry[]>>({});
   const [trendPeriod, setTrendPeriod] = useState<'30d' | '90d' | '1y'>('90d');
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
   useEffect(() => {
     fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
     fetchJson<SleepEntry[]>('/data/sleep.json').then(setSleep);
 
-    // Load individual metric time series for trend analysis
     const metricFiles = [
       'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max',
       'OxygenSaturation', 'BodyMassIndex', 'BodyFatPercentage',
@@ -192,12 +192,25 @@ export default function AnalysisTab() {
   const sleepStages = useMemo(() => analyzeSleepStages(sleep), [sleep]);
   const activityRings = useMemo(() => analyzeActivityRings(activity), [activity]);
 
+  const riskLevelText = (level: MetricAssessment['level']): string => {
+    const map: Record<string, string> = {
+      optimal: t('riskOptimal') as string,
+      good: t('riskGood') as string,
+      normal: t('riskNormal') as string,
+      concern: t('riskConcern') as string,
+      warning: t('riskWarning') as string,
+    };
+    return map[level] || getRiskLevel(level);
+  };
+
   const categoryScores = [
-    { label: 'Cardiovascular', score: healthScore.cardiovascular, icon: '❤️' },
-    { label: 'Fitness', score: healthScore.fitness, icon: '🏃' },
-    { label: 'Sleep', score: healthScore.sleep, icon: '😴' },
-    { label: 'Activity', score: healthScore.activity, icon: '📊' },
+    { label: t('categoryCardiovascular') as string, score: healthScore.cardiovascular, icon: '❤️' },
+    { label: t('categoryFitness') as string, score: healthScore.fitness, icon: '🏃' },
+    { label: t('categorySleep') as string, score: healthScore.sleep, icon: '😴' },
+    { label: t('categoryActivity') as string, score: healthScore.activity, icon: '📊' },
   ];
+
+  const scoreLabel = healthScore.overall >= 80 ? t('excellent') as string : healthScore.overall >= 60 ? t('good') as string : t('needsImprovement') as string;
 
   return (
     <div className="space-y-8">
@@ -206,10 +219,10 @@ export default function AnalysisTab() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-light tracking-tight mb-2 text-brand-900 dark:text-brand-100">
-              Overall Health Score
+              {t('overallHealthScore') as string}
             </h2>
             <p className="text-sm font-light text-brand-600 dark:text-brand-400">
-              Age-adjusted for 43-year-old male · Last updated: {new Date().toLocaleDateString()}
+              {t('ageAdjustedFor') as string} · {t('lastUpdated') as string}: {new Date().toLocaleDateString()}
             </p>
           </div>
           <div className="text-right">
@@ -218,7 +231,7 @@ export default function AnalysisTab() {
               <span className="text-2xl text-brand-500">/100</span>
             </div>
             <div className={`text-sm font-medium ${healthScore.overall >= 80 ? 'text-green-600 dark:text-green-400' : healthScore.overall >= 60 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              {healthScore.overall >= 80 ? 'Excellent' : healthScore.overall >= 60 ? 'Good' : 'Needs Improvement'}
+              {scoreLabel}
             </div>
           </div>
         </div>
@@ -242,10 +255,10 @@ export default function AnalysisTab() {
       {healthScore.strengths.length > 0 && (
         <div className="card p-6 border-l-4 border-green-500">
           <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-3">
-            💪 Strengths
+            💪 {t('strengths') as string}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {healthScore.strengths.map(s => (
+            {healthScore.strengths.map((s: string) => (
               <span key={s} className="px-3 py-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-full">
                 {getMetricDisplayName(s)}
               </span>
@@ -257,10 +270,10 @@ export default function AnalysisTab() {
       {healthScore.topConcerns.length > 0 && (
         <div className="card p-6 border-l-4 border-orange-500">
           <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-4">
-            ⚠️ Areas Needing Attention
+            ⚠️ {t('areasNeedingAttention') as string}
           </h3>
           <div className="space-y-3">
-            {healthScore.topConcerns.map((concern, i) => (
+            {healthScore.topConcerns.map((concern: string, i: number) => (
               <p key={i} className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
                 {concern}
               </p>
@@ -271,15 +284,15 @@ export default function AnalysisTab() {
 
       {/* Sub-metric Breakdowns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SleepBreakdownCard stages={sleepStages} />
-        <ActivityRingsCard rings={activityRings} />
+        <SleepBreakdownCard stages={sleepStages} title={t('sleepBreakdown') as string} avgLabel={t('dayAvg') as string} />
+        <ActivityRingsCard rings={activityRings} title={t('activityRings') as string} avgLabel={t('dayAvg') as string} />
       </div>
 
-      {/* Detailed Metric Assessments with Percentiles + Trends */}
+      {/* Detailed Metric Assessments with Percentiles + Trends + Deep Analysis */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-light tracking-tight text-brand-900 dark:text-brand-100">
-            Detailed Analysis
+            {t('detailedAnalysis') as string}
           </h2>
           <div className="flex items-center gap-1 bg-brand-100 dark:bg-brand-800 rounded-lg p-1">
             {(['30d', '90d', '1y'] as const).map(p => (
@@ -294,47 +307,94 @@ export default function AnalysisTab() {
           </div>
         </div>
         <div className="space-y-4">
-          {keyAssessments.map(({ key, assessment, percentile, trend }) => (
-            <div key={key} className={`card p-5 border ${getLevelBg(assessment.level)}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-3 mb-1 flex-wrap">
-                    <h4 className="text-base font-medium text-brand-900 dark:text-brand-100">
-                      {assessment.metric}
-                    </h4>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getLevelColor(assessment.level)}`}>
-                      {getRiskLevel(assessment.level)}
-                    </span>
-                    {trend && <TrendBadge trend={trend} />}
-                  </div>
-                  <div className="text-2xl font-light text-brand-900 dark:text-brand-100 mb-2">
-                    {assessment.value < 100 ? assessment.value.toFixed(1) : Math.round(assessment.value).toLocaleString()}
+          {keyAssessments.map(({ key, assessment, percentile, trend }) => {
+            const detailed = getDetailedAnalysis(key, assessment.value, lang);
+            const isExpanded = expandedMetric === key;
+
+            return (
+              <div key={key} className={`card p-5 border ${getLevelBg(assessment.level)}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+                      <h4 className="text-base font-medium text-brand-900 dark:text-brand-100">
+                        {assessment.metric}
+                      </h4>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${getLevelColor(assessment.level)}`}>
+                        {riskLevelText(assessment.level)}
+                      </span>
+                      {trend && <TrendBadge trend={trend} />}
+                    </div>
+                    <div className="text-2xl font-light text-brand-900 dark:text-brand-100 mb-2">
+                      {assessment.value < 100 ? assessment.value.toFixed(1) : Math.round(assessment.value).toLocaleString()}
+                    </div>
                   </div>
                 </div>
+                <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed mb-2">
+                  {assessment.interpretation}
+                </p>
+                {percentile !== null && <PercentileBar percentile={percentile} label={t('percentileVs') as string} />}
+                {assessment.recommendation && (
+                  <div className="pt-3 mt-3 border-t border-brand-200 dark:border-brand-700">
+                    <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">
+                      {t('recommendation') as string}
+                    </p>
+                    <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+                      {assessment.recommendation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Deep Analysis Toggle */}
+                {detailed && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setExpandedMetric(isExpanded ? null : key)}
+                      className="text-xs text-brand-500 hover:text-brand-700 dark:hover:text-brand-300 transition-colors flex items-center gap-1"
+                    >
+                      <span className={`transition-transform inline-block ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                      {lang === 'zh' ? '深度分析' : 'Deep Analysis'}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-700 space-y-4">
+                        <div>
+                          <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">
+                            {lang === 'zh' ? '临床意义' : 'Clinical Significance'}
+                          </p>
+                          <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+                            {detailed.clinicalSignificance}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">
+                            {lang === 'zh' ? '健康影响' : 'Health Implications'}
+                          </p>
+                          <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+                            {detailed.healthImplications}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">
+                            {lang === 'zh' ? '改进方案' : 'Action Plan'}
+                          </p>
+                          <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+                            {detailed.actionableIntervention}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed mb-2">
-                {assessment.interpretation}
-              </p>
-              {percentile !== null && <PercentileBar percentile={percentile} />}
-              {assessment.recommendation && (
-                <div className="pt-3 mt-3 border-t border-brand-200 dark:border-brand-700">
-                  <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">
-                    Recommendation
-                  </p>
-                  <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
-                    {assessment.recommendation}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Disclaimer */}
       <div className="card p-5 bg-brand-100/50 dark:bg-brand-900/30 border-brand-300 dark:border-brand-700">
         <p className="text-xs font-light text-brand-600 dark:text-brand-400 leading-relaxed">
-          <strong className="font-medium text-brand-900 dark:text-brand-100">Medical Disclaimer:</strong> This analysis is for informational purposes only and does not constitute medical advice. Reference ranges are based on clinical guidelines (AHA, WHO, ACE, NSF, Cooper Clinic) adjusted for a 43-year-old male. Percentile rankings derived from NHANES and Framingham population data. Individual needs may vary. Consult healthcare providers for personalized medical guidance.
+          <strong className="font-medium text-brand-900 dark:text-brand-100">{t('medicalDisclaimer') as string}</strong>{' '}
+          {t('disclaimerText') as string}
         </p>
       </div>
     </div>
