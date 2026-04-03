@@ -1,0 +1,13 @@
+{
+  "me": {
+    "dateOfBirth": "1982-10-10",
+    "biologicalSex": "HKBiologicalSexMale",
+    "bloodType": "HKBloodTypeAPositive",
+    "skinType": "HKFitzpatrickSkinTypeI"
+  },
+  "exportDate": "2026-03-17 23:37:42 +0800",
+  "totalRecords": 4958387,
+  "uniqueTypes": 50,
+  "totalWorkouts": 419,
+  "totalActivityDays": 2988
+}
