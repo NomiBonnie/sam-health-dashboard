@@ -259,6 +259,263 @@ function calcCategoryScore(metrics: Record<string, number>, keys: string[]): num
   return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 }
 
+// ============================================================
+// PERCENTILE COMPARISON (vs 43-year-old males)
+// Based on clinical research: NHANES, Cooper Clinic, Framingham
+// ============================================================
+
+interface PercentileRange {
+  p5: number; p10: number; p25: number; p50: number; p75: number; p90: number; p95: number;
+}
+
+// Reference distributions for 40-49 year old males
+const PERCENTILE_TABLES: Record<string, PercentileRange> = {
+  RestingHeartRate:         { p5: 48, p10: 52, p25: 58, p50: 66, p75: 74, p90: 80, p95: 86 },
+  HeartRateVariabilitySDNN: { p5: 12, p10: 18, p25: 26, p50: 36, p75: 50, p90: 68, p95: 82 },
+  VO2Max:                   { p5: 22, p10: 25, p25: 30, p50: 35, p75: 40, p90: 45, p95: 50 },
+  OxygenSaturation:         { p5: 94, p10: 95, p25: 96, p50: 97, p75: 98, p90: 99, p95: 99.5 },
+  BodyMassIndex:            { p5: 20, p10: 21.5, p25: 24, p50: 27, p75: 30, p90: 33, p95: 36 },
+  BodyFatPercentage:        { p5: 11, p10: 14, p25: 18, p50: 23, p75: 27, p90: 31, p95: 34 },
+  StepCount:                { p5: 2000, p10: 3000, p25: 5000, p50: 7000, p75: 9500, p90: 12000, p95: 14000 },
+  SleepDuration:            { p5: 4.5, p10: 5.2, p25: 6.0, p50: 6.8, p75: 7.5, p90: 8.2, p95: 8.8 },
+  WalkingSpeed:             { p5: 3.0, p10: 3.5, p25: 4.2, p50: 4.8, p75: 5.5, p90: 6.0, p95: 6.5 },
+  AppleWalkingSteadiness:   { p5: 75, p10: 80, p25: 86, p50: 91, p75: 95, p90: 97, p95: 99 },
+};
+
+// For inverted metrics (lower = better), we flip the percentile
+const INVERTED_METRICS = new Set(['RestingHeartRate', 'BodyMassIndex', 'BodyFatPercentage']);
+
+export function calculatePercentile(metricName: string, value: number): number | null {
+  const table = PERCENTILE_TABLES[metricName];
+  if (!table) return null;
+
+  const points = [
+    { pct: 5, val: table.p5 },
+    { pct: 10, val: table.p10 },
+    { pct: 25, val: table.p25 },
+    { pct: 50, val: table.p50 },
+    { pct: 75, val: table.p75 },
+    { pct: 90, val: table.p90 },
+    { pct: 95, val: table.p95 },
+  ];
+
+  // Linear interpolation
+  let percentile: number;
+  if (value <= points[0].val) {
+    percentile = points[0].pct * (value / points[0].val);
+  } else if (value >= points[points.length - 1].val) {
+    percentile = 95 + (5 * Math.min(1, (value - points[points.length - 1].val) / (points[points.length - 1].val * 0.1)));
+  } else {
+    let lower = points[0], upper = points[1];
+    for (let i = 0; i < points.length - 1; i++) {
+      if (value >= points[i].val && value <= points[i + 1].val) {
+        lower = points[i];
+        upper = points[i + 1];
+        break;
+      }
+    }
+    const ratio = (value - lower.val) / (upper.val - lower.val);
+    percentile = lower.pct + ratio * (upper.pct - lower.pct);
+  }
+
+  // Invert for metrics where lower is better
+  if (INVERTED_METRICS.has(metricName)) {
+    percentile = 100 - percentile;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(percentile)));
+}
+
+export function getPercentileLabel(pct: number): string {
+  if (pct >= 90) return 'Top 10%';
+  if (pct >= 75) return 'Above Average';
+  if (pct >= 50) return 'Average';
+  if (pct >= 25) return 'Below Average';
+  return 'Bottom 25%';
+}
+
+// ============================================================
+// TREND ANALYSIS (linear regression slope)
+// ============================================================
+
+export interface TrendResult {
+  period: '30d' | '90d' | '1y';
+  slope: number;           // change per day
+  totalChange: number;     // slope * days
+  direction: 'improving' | 'declining' | 'stable';
+  confidence: number;      // R² value 0-1
+  label: string;
+}
+
+export function detectTrend(
+  data: { date: string; value: number }[],
+  period: '30d' | '90d' | '1y',
+  invertedBetter = false
+): TrendResult | null {
+  const days = period === '30d' ? 30 : period === '90d' ? 90 : 365;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  
+  const filtered = data.filter(d => new Date(d.date) >= cutoff && d.value > 0);
+  if (filtered.length < 5) return null;
+
+  // Linear regression
+  const n = filtered.length;
+  const t0 = new Date(filtered[0].date).getTime();
+  const xs = filtered.map(d => (new Date(d.date).getTime() - t0) / 86400000); // days from start
+  const ys = filtered.map(d => d.value);
+
+  const sumX = xs.reduce((a, b) => a + b, 0);
+  const sumY = ys.reduce((a, b) => a + b, 0);
+  const sumXY = xs.reduce((s, x, i) => s + x * ys[i], 0);
+  const sumXX = xs.reduce((s, x) => s + x * x, 0);
+  const sumYY = ys.reduce((s, y) => s + y * y, 0);
+
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) return null;
+
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const totalChange = slope * (xs[xs.length - 1] - xs[0]);
+
+  // R² for confidence
+  const ssRes = ys.reduce((s, y, i) => {
+    const intercept = (sumY - slope * sumX) / n;
+    const predicted = intercept + slope * xs[i];
+    return s + (y - predicted) ** 2;
+  }, 0);
+  const meanY = sumY / n;
+  const ssTot = ys.reduce((s, y) => s + (y - meanY) ** 2, 0);
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+
+  // Determine direction - use normalized threshold (% of mean per day)
+  const threshold = meanY * 0.001; // 0.1% of mean per day
+  let direction: TrendResult['direction'];
+  const effectiveSlope = invertedBetter ? -slope : slope;
+  if (Math.abs(slope) < threshold || r2 < 0.05) {
+    direction = 'stable';
+  } else {
+    direction = effectiveSlope > 0 ? 'improving' : 'declining';
+  }
+
+  const pctChange = meanY !== 0 ? (totalChange / meanY) * 100 : 0;
+  let label = '';
+  if (direction === 'stable') {
+    label = 'Stable';
+  } else {
+    const arrow = direction === 'improving' ? '↑' : '↓';
+    label = `${arrow} ${Math.abs(pctChange).toFixed(1)}%`;
+  }
+
+  return { period, slope, totalChange, direction, confidence: r2, label };
+}
+
+// ============================================================
+// SLEEP STAGE BREAKDOWN ANALYSIS
+// ============================================================
+
+export interface SleepStageAnalysis {
+  stage: string;
+  avgMinutes: number;
+  percentage: number;
+  idealRange: [number, number]; // percentage range
+  status: 'good' | 'low' | 'high';
+  interpretation: string;
+}
+
+export function analyzeSleepStages(sleepData: { stage_AsleepCore_min?: number; stage_AsleepDeep_min?: number; stage_AsleepREM_min?: number; stage_Awake_min?: number; total_hours: number }[]): SleepStageAnalysis[] {
+  const recent = sleepData.slice(-30).filter(s => s.total_hours > 0);
+  if (recent.length === 0) return [];
+
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+  const coreVals = recent.map(s => s.stage_AsleepCore_min ?? 0);
+  const deepVals = recent.map(s => s.stage_AsleepDeep_min ?? 0);
+  const remVals = recent.map(s => s.stage_AsleepREM_min ?? 0);
+  const awakeVals = recent.map(s => s.stage_Awake_min ?? 0);
+  const totalMin = recent.map(s => s.total_hours * 60);
+
+  const avgCore = avg(coreVals);
+  const avgDeep = avg(deepVals);
+  const avgREM = avg(remVals);
+  const avgAwake = avg(awakeVals);
+  const avgTotal = avg(totalMin);
+
+  if (avgTotal === 0) return [];
+
+  const analyze = (
+    stage: string, avgMin: number, idealPct: [number, number]
+  ): SleepStageAnalysis => {
+    const pct = (avgMin / avgTotal) * 100;
+    let status: 'good' | 'low' | 'high' = 'good';
+    let interpretation = '';
+
+    if (pct < idealPct[0]) {
+      status = 'low';
+      interpretation = `Below ideal range. Target: ${idealPct[0]}-${idealPct[1]}% of total sleep.`;
+    } else if (pct > idealPct[1]) {
+      status = 'high';
+      interpretation = `Above typical range. May indicate sleep fragmentation.`;
+    } else {
+      interpretation = `Within healthy range for a 43-year-old male.`;
+    }
+
+    return { stage, avgMinutes: Math.round(avgMin), percentage: Math.round(pct * 10) / 10, idealRange: idealPct, status, interpretation };
+  };
+
+  // Ideal percentages for adults (AASM guidelines)
+  return [
+    analyze('Deep Sleep', avgDeep, [13, 23]),
+    analyze('REM Sleep', avgREM, [20, 25]),
+    analyze('Core Sleep', avgCore, [45, 55]),
+    analyze('Awake', avgAwake, [2, 10]),
+  ];
+}
+
+// ============================================================
+// ACTIVITY RING ANALYSIS
+// ============================================================
+
+export interface ActivityBreakdown {
+  metric: string;
+  avg: number;
+  goal: number;
+  completionRate: number; // % of days meeting goal
+  trend: 'improving' | 'declining' | 'stable';
+  icon: string;
+}
+
+export function analyzeActivityRings(activity: { activeEnergy: number; activeEnergyGoal: number; exerciseMin: number; exerciseGoal: number; standHours: number; standGoal: number; date: string }[]): ActivityBreakdown[] {
+  const recent = activity.slice(-30).filter(a => a.activeEnergy > 0);
+  if (recent.length === 0) return [];
+
+  const moveCompletion = recent.filter(a => a.activeEnergy >= a.activeEnergyGoal).length / recent.length * 100;
+  const exerciseCompletion = recent.filter(a => a.exerciseMin >= a.exerciseGoal).length / recent.length * 100;
+  const standCompletion = recent.filter(a => a.standHours >= a.standGoal).length / recent.length * 100;
+
+  const avgMove = recent.reduce((s, a) => s + a.activeEnergy, 0) / recent.length;
+  const avgExercise = recent.reduce((s, a) => s + a.exerciseMin, 0) / recent.length;
+  const avgStand = recent.reduce((s, a) => s + a.standHours, 0) / recent.length;
+
+  // Simple trend: compare last 15 vs first 15
+  const half = Math.floor(recent.length / 2);
+  const first = recent.slice(0, half);
+  const second = recent.slice(half);
+
+  const trendOf = (getter: (a: typeof recent[0]) => number): 'improving' | 'declining' | 'stable' => {
+    const avg1 = first.reduce((s, a) => s + getter(a), 0) / first.length;
+    const avg2 = second.reduce((s, a) => s + getter(a), 0) / second.length;
+    const pctChange = avg1 > 0 ? ((avg2 - avg1) / avg1) * 100 : 0;
+    if (Math.abs(pctChange) < 5) return 'stable';
+    return pctChange > 0 ? 'improving' : 'declining';
+  };
+
+  return [
+    { metric: 'Move (kcal)', avg: Math.round(avgMove), goal: recent[0]?.activeEnergyGoal ?? 300, completionRate: Math.round(moveCompletion), trend: trendOf(a => a.activeEnergy), icon: '🔴' },
+    { metric: 'Exercise (min)', avg: Math.round(avgExercise), goal: recent[0]?.exerciseGoal ?? 30, completionRate: Math.round(exerciseCompletion), trend: trendOf(a => a.exerciseMin), icon: '🟢' },
+    { metric: 'Stand (hrs)', avg: Math.round(avgStand * 10) / 10, goal: recent[0]?.standGoal ?? 12, completionRate: Math.round(standCompletion), trend: trendOf(a => a.standHours), icon: '🔵' },
+  ];
+}
+
 export function getRiskLevel(level: MetricAssessment['level']): string {
   switch (level) {
     case 'optimal': return 'Excellent';
