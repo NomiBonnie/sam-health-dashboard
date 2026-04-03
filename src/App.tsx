@@ -42,8 +42,8 @@ function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {renderTab()}
       </main>
-      <footer className="text-center py-6 text-xs" style={{ color: 'var(--text-muted)' }}>
-        Data from Apple Health · Exported {me?.exportDate?.slice(0, 10) || ''}
+      <footer className="text-center py-8 text-[10px] font-light uppercase tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.15em' }}>
+        Apple Health Export · {me?.exportDate?.slice(0, 10) || ''}
       </footer>
     </div>
   );

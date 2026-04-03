@@ -78,20 +78,21 @@ export default function MetricChart({ metricName, chartType = 'line', color = '#
   const textColor = dark ? '#a1a1aa' : '#6b7280';
 
   return (
-    <div className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`} style={{ color: 'var(--text-primary)' }}>
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-[11px] font-light uppercase tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
             {displayName}
           </h3>
           {latest && (
-            <span className="text-sm font-medium" style={{ color }}>
-              {latestDisplay != null ? (latestDisplay < 100 ? latestDisplay.toFixed(1) : Math.round(latestDisplay).toLocaleString()) : ''} {unit}
-            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-light" style={{ color: 'var(--text-primary)' }}>
+                {latestDisplay != null ? (latestDisplay < 100 ? latestDisplay.toFixed(1) : Math.round(latestDisplay).toLocaleString()) : ''}
+              </span>
+              <span className="text-xs font-light" style={{ color: 'var(--text-muted)' }}>{unit}</span>
+              <span className="text-xs font-light" style={{ color: 'var(--text-muted)' }}>{trendIcon}</span>
+            </div>
           )}
-          <span className="text-xs font-medium" style={{ color: trendColor }}>
-            {trendIcon}
-          </span>
         </div>
         <TimeRangeSelector value={range} onChange={setRange} />
       </div>

@@ -15,17 +15,17 @@ const OPTIONS: { value: TimeRange; label: string }[] = [
 
 export default function TimeRangeSelector({ value, onChange }: Props) {
   return (
-    <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {OPTIONS.map(opt => (
+    <div className="flex gap-0 border" style={{ borderColor: 'var(--border)' }}>
+      {OPTIONS.map((opt, i) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-            value === opt.value ? 'shadow-sm' : ''
-          }`}
+          className="px-3 py-1 text-[10px] font-light uppercase tracking-widest transition-all border-r last:border-r-0"
           style={{
-            backgroundColor: value === opt.value ? 'var(--bg-card)' : 'transparent',
-            color: value === opt.value ? 'var(--accent)' : 'var(--text-muted)',
+            backgroundColor: value === opt.value ? 'var(--accent)' : 'transparent',
+            color: value === opt.value ? (value === opt.value ? 'var(--bg-primary)' : 'var(--text-muted)') : 'var(--text-muted)',
+            borderColor: 'var(--border)',
+            letterSpacing: '0.1em',
           }}
         >
           {opt.label}
