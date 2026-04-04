@@ -138,7 +138,7 @@ export default function AnalysisTab() {
     const metricFiles = [
       'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max',
       'OxygenSaturation', 'BodyMassIndex', 'BodyFatPercentage',
-      'StepCount', 'WalkingSpeed', 'AppleWalkingSteadiness',
+      'StepCount', 'WalkingSpeed', 'AppleWalkingSteadiness', 'HeartRateRecoveryOneMinute',
     ];
     Promise.all(
       metricFiles.map(name =>
@@ -175,7 +175,7 @@ export default function AnalysisTab() {
     const keys = [
       'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation',
       'BodyMassIndex', 'BodyFatPercentage', 'StepCount', 'SleepDuration',
-      'WalkingSpeed', 'AppleWalkingSteadiness',
+      'WalkingSpeed', 'AppleWalkingSteadiness', 'HeartRateRecoveryOneMinute',
     ];
     return keys
       .map(k => {

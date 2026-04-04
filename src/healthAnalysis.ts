@@ -134,6 +134,16 @@ const STANDARDS: Record<string, HealthStandard> = {
     warning: [0, 80],
     source: 'Apple Health (fall risk)',
   },
+  HeartRateRecoveryOneMinute: {
+    metric: 'Heart Rate Recovery (1min)',
+    unit: 'bpm',
+    optimal: [25, 60],
+    good: [20, 25],
+    normal: [15, 20],
+    concern: [12, 15],
+    warning: [0, 12],
+    source: 'JACC 2000 / Cleveland Clinic',
+  },
 };
 
 export function assessMetric(metricName: string, value: number, lang: 'en' | 'zh' = 'en'): MetricAssessment | null {
@@ -202,6 +212,9 @@ function generateRecommendation(metric: string, value: number, std: HealthStanda
     case 'WalkingSpeed':
       if (value < 4.8) return 'Walking speed predicts longevity. Add brisk walking intervals.';
       break;
+    case 'HeartRateRecoveryOneMinute':
+      if (value < 20) return 'Improve with regular cardio exercise and active cooldowns after workouts.';
+      break;
   }
   return '';
 }
@@ -216,7 +229,7 @@ export function calculateHealthScore(metrics: Record<string, number>, lang: 'en'
   const overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
   // Category scores
-  const cardioMetrics = ['RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation'];
+  const cardioMetrics = ['RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation', 'HeartRateRecoveryOneMinute'];
   const fitnessMetrics = ['StepCount', 'WalkingSpeed', 'AppleWalkingSteadiness'];
   const bodyMetrics = ['BodyMassIndex', 'BodyFatPercentage'];
 
@@ -291,6 +304,7 @@ const PERCENTILE_TABLES: Record<string, PercentileRange> = {
   SleepDuration:            { p5: 4.5, p10: 5.2, p25: 6.0, p50: 6.8, p75: 7.5, p90: 8.2, p95: 8.8 },
   WalkingSpeed:             { p5: 3.0, p10: 3.5, p25: 4.2, p50: 4.8, p75: 5.5, p90: 6.0, p95: 6.5 },
   AppleWalkingSteadiness:   { p5: 75, p10: 80, p25: 86, p50: 91, p75: 95, p90: 97, p95: 99 },
+  HeartRateRecoveryOneMinute: { p5: 6, p10: 9, p25: 14, p50: 20, p75: 26, p90: 33, p95: 40 },
 };
 
 // For inverted metrics (lower = better), we flip the percentile
@@ -783,6 +797,24 @@ export function getDetailedAnalysis(
         : 'Week 1-2: 5min daily single-leg stance (30s each side × 5 sets). Week 3-4: Add balance board or yoga. Consult physiotherapist.';
     } else {
       intervention = lang === 'zh' ? '保持平衡训练。' : 'Maintain balance training.';
+    }
+  } else if (metricName === 'HeartRateRecoveryOneMinute') {
+    significance = lang === 'zh'
+      ? '心率恢复是运动后 1 分钟内心率下降的幅度，直接反映自主神经功能和心血管健康。下降 <12 bpm 是心血管事件的独立预测因子（JACC 2000，Cleveland Clinic 研究）。>25 bpm 表示优秀的副交感神经反射。'
+      : 'Heart rate recovery measures how quickly your heart rate drops in the first minute after exercise. A decline <12 bpm is an independent predictor of cardiovascular mortality (JACC 2000, Cleveland Clinic). >25 bpm indicates excellent parasympathetic reactivation.';
+
+    if (lang === 'zh') {
+      implications = value < 12 ? '心血管事件风险显著升高，建议心脏科评估' : value < 20 ? '自主神经功能中等，有改善空间' : '心血管恢复能力良好';
+    } else {
+      implications = value < 12 ? 'Significantly elevated cardiovascular risk. Cardiology evaluation recommended.' : value < 20 ? 'Moderate autonomic function. Room for improvement.' : 'Good cardiovascular recovery capacity';
+    }
+
+    if (value < 20) {
+      intervention = lang === 'zh'
+        ? '第 1-2 周：每周 3 次有氧运动（30 分钟中等强度），运动后 5 分钟主动放松（慢走）。第 3-4 周：增加 1-2 次间歇训练。监测运动后即时心率和 1 分钟后心率。'
+        : 'Week 1-2: 3x/week moderate cardio (30min), 5min active cooldown (slow walk) after exercise. Week 3-4: Add 1-2x interval training. Track immediate post-exercise HR and 1-min recovery HR.';
+    } else {
+      intervention = lang === 'zh' ? '保持规律有氧运动和运动后主动放松。' : 'Maintain regular cardio and active cooldowns post-exercise.';
     }
   } else {
     return null;
