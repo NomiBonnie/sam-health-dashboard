@@ -321,8 +321,9 @@ export function compareYears(
   if (!data || data.length === 0) return null;
 
   // Determine which field to use (sum for cumulative metrics like StepCount, avg for others)
-  const SUM_METRICS = new Set(['StepCount', 'FlightsClimbed', 'ActiveEnergyBurned', 'AppleExerciseTime',
-    'AppleStandTime', 'DistanceWalkingRunning', 'SwimmingStrokeCount', 'DistanceSwimming', 'TimeInDaylight']);
+  const SUM_METRICS = new Set(['StepCount', 'DistanceWalkingRunning', 'DistanceCycling', 'DistanceSwimming',
+    'ActiveEnergyBurned', 'BasalEnergyBurned', 'AppleExerciseTime', 'AppleStandTime',
+    'FlightsClimbed', 'SwimmingStrokeCount', 'TimeInDaylight']);
   const FRACTION_TO_PCT = new Set(['OxygenSaturation', 'BodyFatPercentage', 'WalkingDoubleSupportPercentage',
     'WalkingAsymmetryPercentage', 'AppleWalkingSteadiness']);
   const useSum = SUM_METRICS.has(metricName);
