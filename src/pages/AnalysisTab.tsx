@@ -22,13 +22,13 @@ function TrendBadge({ trend }: { trend: TrendResult }) {
   );
 }
 
-function PercentileBar({ percentile, label }: { percentile: number; label: string }) {
+function PercentileBar({ percentile, label, lang }: { percentile: number; label: string; lang: 'en' | 'zh' }) {
   const color = percentile >= 75 ? 'bg-green-500' : percentile >= 50 ? 'bg-blue-500' : percentile >= 25 ? 'bg-yellow-500' : 'bg-red-500';
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-brand-500 mb-1">
         <span>{label}</span>
-        <span className="font-medium">{getPercentileLabel(percentile)} ({percentile}th)</span>
+        <span className="font-medium">{getPercentileLabel(percentile, lang)} ({percentile}th)</span>
       </div>
       <div className="w-full h-2 bg-brand-200 dark:bg-brand-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${percentile}%` }} />
@@ -167,7 +167,7 @@ export default function AnalysisTab() {
     return map;
   }, [inventory, sleep]);
 
-  const healthScore = useMemo(() => calculateHealthScore(currentMetrics), [currentMetrics]);
+  const healthScore = useMemo(() => calculateHealthScore(currentMetrics, lang), [currentMetrics, lang]);
 
   const INVERTED_BETTER = new Set(['RestingHeartRate', 'BodyMassIndex', 'BodyFatPercentage']);
 
@@ -179,7 +179,7 @@ export default function AnalysisTab() {
     ];
     return keys
       .map(k => {
-        const assessment = assessMetric(k, currentMetrics[k]);
+        const assessment = assessMetric(k, currentMetrics[k], lang);
         if (!assessment) return null;
         const percentile = calculatePercentile(k, currentMetrics[k]);
         const trendData = metricData[k]?.map(d => ({ date: d.date, value: d.avg })) || [];
@@ -189,7 +189,7 @@ export default function AnalysisTab() {
       .filter(Boolean) as { key: string; assessment: MetricAssessment; percentile: number | null; trend: TrendResult | null }[];
   }, [currentMetrics, metricData, trendPeriod]);
 
-  const sleepStages = useMemo(() => analyzeSleepStages(sleep), [sleep]);
+  const sleepStages = useMemo(() => analyzeSleepStages(sleep, lang), [sleep, lang]);
   const activityRings = useMemo(() => analyzeActivityRings(activity), [activity]);
 
   const riskLevelText = (level: MetricAssessment['level']): string => {
@@ -332,7 +332,7 @@ export default function AnalysisTab() {
                 <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed mb-2">
                   {assessment.interpretation}
                 </p>
-                {percentile !== null && <PercentileBar percentile={percentile} label={t('percentileVs') as string} />}
+                {percentile !== null && <PercentileBar percentile={percentile} label={t('percentileVs') as string} lang={lang} />}
                 {assessment.recommendation && (
                   <div className="pt-3 mt-3 border-t border-brand-200 dark:border-brand-700">
                     <p className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1 uppercase tracking-luxury">

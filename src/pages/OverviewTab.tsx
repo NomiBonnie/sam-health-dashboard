@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry } from '../types';
 import { fetchJson, getMetricDisplayName, getMetricUnit } from '../utils';
+import { useLanguage } from '../LanguageContext';
 
 export default function OverviewTab() {
+  const { lang, t } = useLanguage();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
@@ -34,7 +36,7 @@ export default function OverviewTab() {
       {/* Key metrics grid */}
       <div>
         <h2 className="text-xl font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
-          Key Metrics
+          {t('keyMetrics') as string}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {keyMetrics.map(m => {
@@ -55,7 +57,7 @@ export default function OverviewTab() {
                   <span className="text-xs font-light text-brand-500">{getMetricUnit(m.shortName)}</span>
                 </div>
                 <div className="text-xs font-light mt-2 flex items-center gap-2 text-brand-600 dark:text-brand-400">
-                  <span>30d avg: {displayRecent.toFixed(1)}</span>
+                  <span>{t('thirtyDayAvg') as string}: {displayRecent.toFixed(1)}</span>
                   <span className="text-brand-500">{trendIcon}</span>
                 </div>
               </div>
@@ -67,13 +69,13 @@ export default function OverviewTab() {
       {/* Activity Rings */}
       <div>
         <h2 className="text-xl font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
-          30-Day Goal Completion
+          {t('thirtyDayGoalCompletion') as string}
         </h2>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Move', pct: ringStats.energy, bar: 'bg-brand-900 dark:bg-brand-100' },
-            { label: 'Exercise', pct: ringStats.exercise, bar: 'bg-brand-700 dark:bg-brand-300' },
-            { label: 'Stand', pct: ringStats.stand, bar: 'bg-brand-500' },
+            { label: t('move') as string, pct: ringStats.energy, bar: 'bg-brand-900 dark:bg-brand-100' },
+            { label: t('exercise') as string, pct: ringStats.exercise, bar: 'bg-brand-700 dark:bg-brand-300' },
+            { label: t('stand') as string, pct: ringStats.stand, bar: 'bg-brand-500' },
           ].map(r => (
             <div key={r.label} className="card p-6">
               <div className="text-xs font-light tracking-luxury uppercase mb-3 text-brand-400 dark:text-brand-600">
@@ -96,25 +98,25 @@ export default function OverviewTab() {
       {/* Insights */}
       <div className="card p-6">
         <h3 className="text-lg font-light tracking-tight mb-4 text-brand-900 dark:text-brand-100">
-          Recent Trends
+          {t('recentTrends') as string}
         </h3>
         <div className="space-y-3 text-sm font-light text-brand-600 dark:text-brand-400 leading-relaxed">
           {keyMetrics.slice(0, 4).map(m => {
             const r30 = m.recent30dAvg;
             const all = m.overallAvg;
             const diff = ((r30 - all) / all * 100);
-            const direction = diff > 0 ? 'higher' : 'lower';
+            const direction = diff > 0 ? (t('higherThan') as string) : (t('lowerThan') as string);
             return (
               <p key={m.shortName}>
                 <span className="text-xs tracking-luxury uppercase text-brand-500">
                   {getMetricDisplayName(m.shortName)}
                 </span>
                 {' · '}
-                30d avg <strong className="font-medium text-brand-900 dark:text-brand-100">{r30.toFixed(1)}</strong> is{' '}
+                {t('thirtyDayAvg') as string} <strong className="font-medium text-brand-900 dark:text-brand-100">{r30.toFixed(1)}</strong> {t('is') as string}{' '}
                 <strong className={`font-medium ${Math.abs(diff) > 5 ? 'text-brand-900 dark:text-brand-100' : 'text-brand-600 dark:text-brand-400'}`}>
                   {Math.abs(diff).toFixed(1)}% {direction}
                 </strong>{' '}
-                than overall ({all.toFixed(1)})
+                {t('thanOverall') as string} ({all.toFixed(1)})
               </p>
             );
           })}

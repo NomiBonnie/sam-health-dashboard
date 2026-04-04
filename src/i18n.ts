@@ -75,6 +75,59 @@ export const translations = {
     riskConcern: 'Needs Attention',
     riskWarning: 'High Risk',
     
+    // Overview Tab
+    keyMetrics: 'Key Metrics',
+    thirtyDayAvg: '30d avg',
+    thirtyDayGoalCompletion: '30-Day Goal Completion',
+    move: 'Move',
+    exercise: 'Exercise',
+    stand: 'Stand',
+    recentTrends: 'Recent Trends',
+    higherThan: 'higher',
+    lowerThan: 'lower',
+    thanOverall: 'than overall',
+    is: 'is',
+
+    // Sleep Tab
+    sleep: 'Sleep',
+    sleepDuration: 'Sleep Duration',
+    sleepStages: 'Sleep Stages',
+    sleepInsights: 'Sleep Insights',
+    averageSleep: 'Average sleep',
+    hours: 'hours',
+    last30Days: 'last 30 days',
+    belowRecommended: '⚠️ Below recommended 7-9 hours',
+    withinRecommended: '✅ Within recommended range',
+    totalHours: 'Total Hours',
+
+    // Heart Tab
+    heartHealth: 'Heart Health',
+
+    // Body Tab
+    bodyComposition: 'Body Composition',
+
+    // Mobility Tab
+    mobility: 'Mobility',
+
+    // Environment Tab
+    environment: 'Environment',
+
+    // Health Analysis strings
+    excellentInterpretation: (metric: string) => `Excellent. Your ${metric} is in the optimal range for a 43-year-old male.`,
+    goodInterpretation: (metric: string) => `Good. Your ${metric} is above average.`,
+    normalInterpretation: 'Normal range, but room for improvement.',
+    concernInterpretation: 'Needs attention. Below recommended levels.',
+    warningInterpretation: 'Concerning. Consult a healthcare provider.',
+    excellentOverall: 'Excellent overall health. Maintain current lifestyle.',
+    goodOverall: 'Good health with room for improvement in key areas.',
+    needsAttentionOverall: 'Needs attention. Prioritize the flagged concerns.',
+    multipleOverall: 'Multiple health concerns detected. Recommend comprehensive health assessment.',
+
+    // Sleep stage interpretations
+    belowIdealRange: (low: number, high: number) => `Below ideal range. Target: ${low}-${high}% of total sleep.`,
+    aboveTypicalRange: 'Above typical range. May indicate sleep fragmentation.',
+    withinHealthyRange: 'Within healthy range for a 43-year-old male.',
+
     // Footer
     appleHealthExport: 'Apple Health Export',
   },
@@ -152,6 +205,59 @@ export const translations = {
     riskConcern: '需关注',
     riskWarning: '高风险',
     
+    // Overview Tab
+    keyMetrics: '关键指标',
+    thirtyDayAvg: '30天均值',
+    thirtyDayGoalCompletion: '30 天目标达成',
+    move: '活动',
+    exercise: '锻炼',
+    stand: '站立',
+    recentTrends: '近期趋势',
+    higherThan: '高于',
+    lowerThan: '低于',
+    thanOverall: '总体均值',
+    is: '',
+
+    // Sleep Tab
+    sleep: '睡眠',
+    sleepDuration: '睡眠时长',
+    sleepStages: '睡眠阶段',
+    sleepInsights: '睡眠洞察',
+    averageSleep: '平均睡眠',
+    hours: '小时',
+    last30Days: '近 30 天',
+    belowRecommended: '⚠️ 低于建议的 7-9 小时',
+    withinRecommended: '✅ 在建议范围内',
+    totalHours: '总时长',
+
+    // Heart Tab
+    heartHealth: '心脏健康',
+
+    // Body Tab
+    bodyComposition: '身体成分',
+
+    // Mobility Tab
+    mobility: '行动力',
+
+    // Environment Tab
+    environment: '环境',
+
+    // Health Analysis strings
+    excellentInterpretation: (metric: string) => `优秀。您的${metric}处于 43 岁男性的最佳范围。`,
+    goodInterpretation: (metric: string) => `良好。您的${metric}高于平均水平。`,
+    normalInterpretation: '正常范围，但仍有提升空间。',
+    concernInterpretation: '需要关注，低于建议水平。',
+    warningInterpretation: '令人担忧，建议咨询医疗专业人员。',
+    excellentOverall: '整体健康状况优秀，保持当前生活方式。',
+    goodOverall: '健康状况良好，部分指标仍有提升空间。',
+    needsAttentionOverall: '需要关注，请优先处理标记的问题。',
+    multipleOverall: '检测到多项健康问题，建议进行全面健康评估。',
+
+    // Sleep stage interpretations
+    belowIdealRange: (low: number, high: number) => `低于理想范围。目标：总睡眠的 ${low}-${high}%。`,
+    aboveTypicalRange: '高于典型范围，可能存在睡眠碎片化。',
+    withinHealthyRange: '处于 43 岁男性的健康范围内。',
+
     // Footer
     appleHealthExport: 'Apple Health 导出',
   },

@@ -136,7 +136,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
 };
 
-export function assessMetric(metricName: string, value: number): MetricAssessment | null {
+export function assessMetric(metricName: string, value: number, lang: 'en' | 'zh' = 'en'): MetricAssessment | null {
   const standard = STANDARDS[metricName];
   if (!standard) return null;
 
@@ -146,20 +146,24 @@ export function assessMetric(metricName: string, value: number): MetricAssessmen
 
   if (value >= standard.optimal[0] && value <= standard.optimal[1]) {
     level = 'optimal';
-    interpretation = `Excellent. Your ${standard.metric} is in the optimal range for a 43-year-old male.`;
+    interpretation = lang === 'zh'
+      ? `优秀。您的${standard.metric}处于 43 岁男性的最佳范围。`
+      : `Excellent. Your ${standard.metric} is in the optimal range for a 43-year-old male.`;
   } else if (value >= standard.good[0] && value <= standard.good[1]) {
     level = 'good';
-    interpretation = `Good. Your ${standard.metric} is above average.`;
+    interpretation = lang === 'zh'
+      ? `良好。您的${standard.metric}高于平均水平。`
+      : `Good. Your ${standard.metric} is above average.`;
   } else if (value >= standard.normal[0] && value <= standard.normal[1]) {
     level = 'normal';
-    interpretation = `Normal range, but room for improvement.`;
+    interpretation = lang === 'zh' ? '正常范围，但仍有提升空间。' : 'Normal range, but room for improvement.';
   } else if (value >= standard.concern[0] && value <= standard.concern[1]) {
     level = 'concern';
-    interpretation = `Needs attention. Below recommended levels.`;
+    interpretation = lang === 'zh' ? '需要关注，低于建议水平。' : 'Needs attention. Below recommended levels.';
     recommendation = generateRecommendation(metricName, value, standard);
   } else {
     level = 'warning';
-    interpretation = `Concerning. Consult a healthcare provider.`;
+    interpretation = lang === 'zh' ? '令人担忧，建议咨询医疗专业人员。' : 'Concerning. Consult a healthcare provider.';
     recommendation = generateRecommendation(metricName, value, standard);
   }
 
@@ -202,9 +206,9 @@ function generateRecommendation(metric: string, value: number, std: HealthStanda
   return '';
 }
 
-export function calculateHealthScore(metrics: Record<string, number>): HealthScore {
+export function calculateHealthScore(metrics: Record<string, number>, lang: 'en' | 'zh' = 'en'): HealthScore {
   const assessments = Object.entries(metrics)
-    .map(([key, val]) => assessMetric(key, val))
+    .map(([key, val]) => assessMetric(key, val, lang))
     .filter(Boolean) as MetricAssessment[];
 
   const scoreMap = { optimal: 100, good: 80, normal: 60, concern: 40, warning: 20 };
@@ -234,10 +238,17 @@ export function calculateHealthScore(metrics: Record<string, number>): HealthSco
   });
 
   let interpretation = '';
-  if (overall >= 80) interpretation = 'Excellent overall health. Maintain current lifestyle.';
-  else if (overall >= 60) interpretation = 'Good health with room for improvement in key areas.';
-  else if (overall >= 40) interpretation = 'Needs attention. Prioritize the flagged concerns.';
-  else interpretation = 'Multiple health concerns detected. Recommend comprehensive health assessment.';
+  if (lang === 'zh') {
+    if (overall >= 80) interpretation = '整体健康状况优秀，保持当前生活方式。';
+    else if (overall >= 60) interpretation = '健康状况良好，部分指标仍有提升空间。';
+    else if (overall >= 40) interpretation = '需要关注，请优先处理标记的问题。';
+    else interpretation = '检测到多项健康问题，建议进行全面健康评估。';
+  } else {
+    if (overall >= 80) interpretation = 'Excellent overall health. Maintain current lifestyle.';
+    else if (overall >= 60) interpretation = 'Good health with room for improvement in key areas.';
+    else if (overall >= 40) interpretation = 'Needs attention. Prioritize the flagged concerns.';
+    else interpretation = 'Multiple health concerns detected. Recommend comprehensive health assessment.';
+  }
 
   return {
     overall,
@@ -326,7 +337,14 @@ export function calculatePercentile(metricName: string, value: number): number |
   return Math.max(0, Math.min(100, Math.round(percentile)));
 }
 
-export function getPercentileLabel(pct: number): string {
+export function getPercentileLabel(pct: number, lang: 'en' | 'zh' = 'en'): string {
+  if (lang === 'zh') {
+    if (pct >= 90) return '前 10%';
+    if (pct >= 75) return '高于平均';
+    if (pct >= 50) return '平均';
+    if (pct >= 25) return '低于平均';
+    return '后 25%';
+  }
   if (pct >= 90) return 'Top 10%';
   if (pct >= 75) return 'Above Average';
   if (pct >= 50) return 'Average';
@@ -422,7 +440,7 @@ export interface SleepStageAnalysis {
   interpretation: string;
 }
 
-export function analyzeSleepStages(sleepData: { stage_AsleepCore_min?: number; stage_AsleepDeep_min?: number; stage_AsleepREM_min?: number; stage_Awake_min?: number; total_hours: number }[]): SleepStageAnalysis[] {
+export function analyzeSleepStages(sleepData: { stage_AsleepCore_min?: number; stage_AsleepDeep_min?: number; stage_AsleepREM_min?: number; stage_Awake_min?: number; total_hours: number }[], lang: 'en' | 'zh' = 'en'): SleepStageAnalysis[] {
   const recent = sleepData.slice(-30).filter(s => s.total_hours > 0);
   if (recent.length === 0) return [];
 
@@ -451,12 +469,18 @@ export function analyzeSleepStages(sleepData: { stage_AsleepCore_min?: number; s
 
     if (pct < idealPct[0]) {
       status = 'low';
-      interpretation = `Below ideal range. Target: ${idealPct[0]}-${idealPct[1]}% of total sleep.`;
+      interpretation = lang === 'zh'
+        ? `低于理想范围。目标：总睡眠的 ${idealPct[0]}-${idealPct[1]}%。`
+        : `Below ideal range. Target: ${idealPct[0]}-${idealPct[1]}% of total sleep.`;
     } else if (pct > idealPct[1]) {
       status = 'high';
-      interpretation = `Above typical range. May indicate sleep fragmentation.`;
+      interpretation = lang === 'zh'
+        ? '高于典型范围，可能存在睡眠碎片化。'
+        : 'Above typical range. May indicate sleep fragmentation.';
     } else {
-      interpretation = `Within healthy range for a 43-year-old male.`;
+      interpretation = lang === 'zh'
+        ? '处于 43 岁男性的健康范围内。'
+        : 'Within healthy range for a 43-year-old male.';
     }
 
     return { stage, avgMinutes: Math.round(avgMin), percentage: Math.round(pct * 10) / 10, idealRange: idealPct, status, interpretation };
@@ -516,7 +540,16 @@ export function analyzeActivityRings(activity: { activeEnergy: number; activeEne
   ];
 }
 
-export function getRiskLevel(level: MetricAssessment['level']): string {
+export function getRiskLevel(level: MetricAssessment['level'], lang: 'en' | 'zh' = 'en'): string {
+  if (lang === 'zh') {
+    switch (level) {
+      case 'optimal': return '优秀';
+      case 'good': return '良好';
+      case 'normal': return '正常';
+      case 'concern': return '需关注';
+      case 'warning': return '高风险';
+    }
+  }
   switch (level) {
     case 'optimal': return 'Excellent';
     case 'good': return 'Good';
