@@ -130,6 +130,11 @@ export const translations = {
     aboveTypicalRange: 'Above typical range. May indicate sleep fragmentation.',
     withinHealthyRange: 'Within healthy range for a 43-year-old male.',
 
+    // Year Comparison
+    yearComparison: 'Year Comparison',
+    vsLastYear: 'vs last year',
+    noData: 'Insufficient data',
+
     // Footer
     appleHealthExport: 'Apple Health Export',
   },
@@ -261,6 +266,11 @@ export const translations = {
     belowIdealRange: (low: number, high: number) => `低于理想范围。目标：总睡眠的 ${low}-${high}%。`,
     aboveTypicalRange: '高于典型范围，可能存在睡眠碎片化。',
     withinHealthyRange: '处于 43 岁男性的健康范围内。',
+
+    // Year Comparison
+    yearComparison: '年度对比',
+    vsLastYear: '较去年',
+    noData: '数据不足',
 
     // Footer
     appleHealthExport: 'Apple Health 导出',

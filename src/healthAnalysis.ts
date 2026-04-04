@@ -284,6 +284,74 @@ function calcCategoryScore(metrics: Record<string, number>, keys: string[]): num
 }
 
 // ============================================================
+// YEAR-OVER-YEAR COMPARISON
+// ============================================================
+
+export interface YearComparison {
+  metric: string;
+  currentYear: { year: number; avg: number };
+  previousYear: { year: number; avg: number };
+  change: number; // percentage change
+  direction: 'improving' | 'declining' | 'stable';
+  isPositiveChange: boolean; // whether the change is good (accounts for inverted metrics)
+}
+
+export function compareYears(
+  metricName: string,
+  data: { date: string; avg: number }[],
+  invertedBetter: boolean = false
+): YearComparison | null {
+  if (!data || data.length === 0) return null;
+
+  // Group by year
+  const byYear: Record<number, number[]> = {};
+  data.forEach(d => {
+    const year = new Date(d.date).getFullYear();
+    if (!byYear[year]) byYear[year] = [];
+    if (d.avg > 0) byYear[year].push(d.avg);
+  });
+
+  const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
+  if (years.length < 2) return null;
+
+  const currentYear = years[0];
+  const previousYear = years[1];
+
+  const currentValues = byYear[currentYear];
+  const previousValues = byYear[previousYear];
+  if (!currentValues?.length || !previousValues?.length) return null;
+
+  const currentAvg = currentValues.reduce((a, b) => a + b, 0) / currentValues.length;
+  const previousAvg = previousValues.reduce((a, b) => a + b, 0) / previousValues.length;
+
+  if (previousAvg === 0) return null;
+  const change = ((currentAvg - previousAvg) / previousAvg) * 100;
+
+  let direction: YearComparison['direction'];
+  if (Math.abs(change) < 2) {
+    direction = 'stable';
+  } else {
+    // For inverted metrics, a decrease is improving
+    const effectiveChange = invertedBetter ? -change : change;
+    direction = effectiveChange > 0 ? 'improving' : 'declining';
+  }
+
+  const isPositiveChange = direction === 'improving' || direction === 'stable';
+
+  const standard = STANDARDS[metricName];
+  const metricDisplayName = standard?.metric || metricName;
+
+  return {
+    metric: metricDisplayName,
+    currentYear: { year: currentYear, avg: Math.round(currentAvg * 100) / 100 },
+    previousYear: { year: previousYear, avg: Math.round(previousAvg * 100) / 100 },
+    change: Math.round(change * 10) / 10,
+    direction,
+    isPositiveChange,
+  };
+}
+
+// ============================================================
 // PERCENTILE COMPARISON (vs 43-year-old males)
 // Based on clinical research: NHANES, Cooper Clinic, Framingham
 // ============================================================

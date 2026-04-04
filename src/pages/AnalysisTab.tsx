@@ -5,8 +5,9 @@ import { useLanguage } from '../LanguageContext';
 import {
   assessMetric, calculateHealthScore, getRiskLevel, getLevelColor, getLevelBg,
   calculatePercentile, getPercentileLabel, detectTrend, analyzeSleepStages,
-  analyzeActivityRings, getDetailedAnalysis,
+  analyzeActivityRings, getDetailedAnalysis, compareYears,
   type MetricAssessment, type TrendResult, type SleepStageAnalysis, type ActivityBreakdown,
+  type YearComparison,
 } from '../healthAnalysis';
 
 function TrendBadge({ trend }: { trend: TrendResult }) {
@@ -142,9 +143,12 @@ export default function AnalysisTab() {
     ];
     Promise.all(
       metricFiles.map(name =>
-        fetchJson<MetricEntry[]>(`/data/${name}.json`)
+        fetchJson<MetricEntry[]>(`/data/metrics/${name}.json`)
           .then(data => ({ name, data }))
-          .catch(() => ({ name, data: [] }))
+          .catch(() => fetchJson<MetricEntry[]>(`/data/${name}.json`)
+            .then(data => ({ name, data }))
+            .catch(() => ({ name, data: [] }))
+          )
       )
     ).then(results => {
       const map: Record<string, MetricEntry[]> = {};
@@ -191,6 +195,22 @@ export default function AnalysisTab() {
 
   const sleepStages = useMemo(() => analyzeSleepStages(sleep, lang), [sleep, lang]);
   const activityRings = useMemo(() => analyzeActivityRings(activity), [activity]);
+
+  const yearComparisons = useMemo(() => {
+    const INVERTED_METRICS_SET = new Set(['RestingHeartRate', 'BodyMassIndex', 'BodyFatPercentage']);
+    const metricNames = [
+      'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max',
+      'OxygenSaturation', 'BodyMassIndex', 'BodyFatPercentage',
+      'StepCount', 'WalkingSpeed', 'AppleWalkingSteadiness', 'HeartRateRecoveryOneMinute',
+    ];
+    return metricNames
+      .map(name => {
+        const data = metricData[name];
+        if (!data || data.length === 0) return null;
+        return compareYears(name, data, INVERTED_METRICS_SET.has(name));
+      })
+      .filter(Boolean) as YearComparison[];
+  }, [metricData]);
 
   const riskLevelText = (level: MetricAssessment['level']): string => {
     const map: Record<string, string> = {
@@ -287,6 +307,44 @@ export default function AnalysisTab() {
         <SleepBreakdownCard stages={sleepStages} title={t('sleepBreakdown') as string} avgLabel={t('dayAvg') as string} />
         <ActivityRingsCard rings={activityRings} title={t('activityRings') as string} avgLabel={t('dayAvg') as string} />
       </div>
+
+      {/* Year-over-Year Comparison */}
+      {yearComparisons.length > 0 && (
+        <div>
+          <h2 className="text-xl font-light tracking-tight text-brand-900 dark:text-brand-100 mb-4">
+            📅 {t('yearComparison') as string}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {yearComparisons.map(yc => {
+              const arrow = yc.direction === 'improving' ? '↑' : yc.direction === 'declining' ? '↓' : '→';
+              const color = yc.direction === 'improving'
+                ? 'text-green-600 dark:text-green-400'
+                : yc.direction === 'declining'
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-brand-500';
+              const bgColor = yc.direction === 'improving'
+                ? 'border-green-200 dark:border-green-800'
+                : yc.direction === 'declining'
+                ? 'border-red-200 dark:border-red-800'
+                : 'border-brand-200 dark:border-brand-800';
+              return (
+                <div key={yc.metric} className={`card p-3 border ${bgColor}`}>
+                  <div className="text-xs text-brand-500 mb-1 truncate">{yc.metric}</div>
+                  <div className="text-sm font-medium text-brand-900 dark:text-brand-100">
+                    {yc.currentYear.avg < 100 ? yc.currentYear.avg.toFixed(1) : Math.round(yc.currentYear.avg).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-brand-400">
+                    {t('vsLastYear') as string}: {yc.previousYear.avg < 100 ? yc.previousYear.avg.toFixed(1) : Math.round(yc.previousYear.avg).toLocaleString()}
+                  </div>
+                  <div className={`text-sm font-medium mt-1 ${color}`}>
+                    {arrow} {Math.abs(yc.change)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Detailed Metric Assessments with Percentiles + Trends + Deep Analysis */}
       <div>
