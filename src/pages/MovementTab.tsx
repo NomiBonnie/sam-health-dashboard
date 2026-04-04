@@ -4,28 +4,87 @@ import {
 } from 'recharts';
 import MetricChart from '../components/MetricChart';
 import TimeRangeSelector from '../components/TimeRangeSelector';
-import { ActivityEntry, TimeRange } from '../types';
+import { ActivityEntry, InventoryItem, TimeRange } from '../types';
 import { fetchJson, filterByTimeRange, sampleData } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
+import { assessMetric, type MetricAssessment } from '../healthAnalysis';
+
+function StatusDot({ level }: { level: MetricAssessment['level'] }) {
+  const colors: Record<string, string> = {
+    optimal: 'bg-green-500', good: 'bg-green-400', normal: 'bg-yellow-500', concern: 'bg-orange-500', warning: 'bg-red-500',
+  };
+  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${colors[level]}`} />;
+}
 
 export default function MovementTab() {
   const { dark } = useTheme();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [range, setRange] = useState<TimeRange>('3m');
 
   useEffect(() => {
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
   }, []);
 
   const filtered = useMemo(() => sampleData(filterByTimeRange(activity, range), 90), [activity, range]);
   const gridColor = dark ? '#2e2e2e' : '#e5e7eb';
   const textColor = dark ? '#a1a1aa' : '#6b7280';
 
+  const movementSummary = useMemo(() => {
+    if (inventory.length === 0) return null;
+    const getValue = (name: string) => {
+      const item = inventory.find(i => i.shortName === name);
+      return item ? (item.recent30dAvg ?? item.latestValue ?? 0) : null;
+    };
+    const steps = getValue('StepCount');
+    const speed = getValue('WalkingSpeed');
+    const steadiness = getValue('AppleWalkingSteadiness');
+
+    const stepsAssess = steps && steps > 0 ? assessMetric('StepCount', steps, lang) : null;
+    const speedAssess = speed && speed > 0 ? assessMetric('WalkingSpeed', speed, lang) : null;
+    const steadinessAssess = steadiness && steadiness > 0 ? assessMetric('AppleWalkingSteadiness', steadiness, lang) : null;
+
+    const stepsSentence = steps && steps > 0
+      ? (lang === 'zh'
+        ? `日均步数 ${Math.round(steps).toLocaleString()} 步${steps >= 10000 ? '，达到 WHO 推荐标准（10,000 步/天）。' : `，低于 WHO 推荐的 10,000 步/天。`}`
+        : `Daily average: ${Math.round(steps).toLocaleString()} steps${steps >= 10000 ? ' — meets WHO recommendation (10,000 steps/day).' : ` — below WHO recommendation of 10,000 steps/day.`}`)
+      : null;
+
+    const mobilityItems = [
+      speedAssess ? { label: speedAssess.metric, level: speedAssess.level } : null,
+      steadinessAssess ? { label: steadinessAssess.metric, level: steadinessAssess.level } : null,
+      stepsAssess ? { label: stepsAssess.metric, level: stepsAssess.level } : null,
+    ].filter(Boolean) as { label: string; level: MetricAssessment['level'] }[];
+
+    return { stepsSentence, mobilityItems };
+  }, [inventory, lang]);
+
   return (
     <div className="space-y-8">
       <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{t('movement') as string}</h2>
+
+      {/* Movement Summary */}
+      {movementSummary && (
+        <div className="card p-5">
+          <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-3">
+            {t('movementSummaryTitle') as string}
+          </h3>
+          {movementSummary.stepsSentence && (
+            <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed mb-3">{movementSummary.stepsSentence}</p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {movementSummary.mobilityItems.map(item => (
+              <span key={item.label} className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
+                <StatusDot level={item.level} />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Activity */}
       <section className="space-y-4">

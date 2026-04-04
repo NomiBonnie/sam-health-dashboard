@@ -140,6 +140,11 @@ export const translations = {
     currentPattern: 'Current Activity Pattern',
     weeklySchedule: 'Suggested Weekly Schedule',
 
+    // Tab Summaries
+    vitalsSummaryTitle: 'Health Summary',
+    movementSummaryTitle: 'Movement Summary',
+    sleepSummaryTitle: 'Sleep Summary',
+
     // Footer
     appleHealthExport: 'Apple Health Export',
   },
@@ -281,6 +286,11 @@ export const translations = {
     personalizedPlan: '个性化运动方案',
     currentPattern: '当前运动模式',
     weeklySchedule: '每周建议',
+
+    // Tab Summaries
+    vitalsSummaryTitle: '健康摘要',
+    movementSummaryTitle: '运动摘要',
+    sleepSummaryTitle: '睡眠摘要',
 
     // Footer
     appleHealthExport: 'Apple Health 导出',

@@ -30,6 +30,37 @@ export default function SleepTab() {
     return last30.reduce((s, d) => s + d.total_hours, 0) / last30.length;
   }, [sleep]);
 
+  const sleepSummary = useMemo(() => {
+    if (sleep.length === 0) return null;
+    const last30 = sleep.slice(-30);
+    const avg = last30.reduce((s, d) => s + d.total_hours, 0) / last30.length;
+    const meetsGoal = avg >= 7;
+
+    // Check deep sleep ratio
+    const hasStages = last30.some(s => s.stage_AsleepDeep_min && s.stage_AsleepDeep_min > 0);
+    let deepSleepNote = '';
+    if (hasStages) {
+      const totalMin = last30.reduce((s, d) => s + d.total_hours * 60, 0) / last30.length;
+      const deepMin = last30.reduce((s, d) => s + (d.stage_AsleepDeep_min ?? 0), 0) / last30.length;
+      const deepPct = totalMin > 0 ? (deepMin / totalMin) * 100 : 0;
+      if (deepPct < 13) {
+        deepSleepNote = lang === 'zh'
+          ? `深度睡眠占比 ${deepPct.toFixed(0)}%，低于理想范围（13-23%）。`
+          : `Deep sleep ratio ${deepPct.toFixed(0)}% — below ideal range (13-23%).`;
+      } else if (deepPct <= 23) {
+        deepSleepNote = lang === 'zh'
+          ? `深度睡眠占比 ${deepPct.toFixed(0)}%，在理想范围内。`
+          : `Deep sleep ratio ${deepPct.toFixed(0)}% — within ideal range.`;
+      } else {
+        deepSleepNote = lang === 'zh'
+          ? `深度睡眠占比 ${deepPct.toFixed(0)}%，高于典型范围。`
+          : `Deep sleep ratio ${deepPct.toFixed(0)}% — above typical range.`;
+      }
+    }
+
+    return { avg, meetsGoal, deepSleepNote };
+  }, [sleep, lang]);
+
   // Prepare stacked data
   const stackedData = useMemo(() => filtered.map(d => ({
     date: d.date,
@@ -48,7 +79,26 @@ export default function SleepTab() {
         </span>
       </div>
 
-      {/* Sleep Duration */}
+      {/* Sleep Summary Card */}
+      {sleepSummary && (
+        <div className="card p-5">
+          <h3 className="text-sm font-medium tracking-luxury uppercase text-brand-900 dark:text-brand-100 mb-3">
+            {t('sleepSummaryTitle') as string}
+          </h3>
+          <div className="space-y-2 text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+            <p>
+              {lang === 'zh'
+                ? `30 天平均睡眠 ${sleepSummary.avg.toFixed(1)} 小时。NSF 建议成人每晚 7-9 小时。`
+                : `30-day average: ${sleepSummary.avg.toFixed(1)}h. NSF recommends 7-9h for adults.`}
+              {sleepSummary.meetsGoal
+                ? (lang === 'zh' ? ' ✅ 达到建议标准。' : ' ✅ Meeting recommendation.')
+                : (lang === 'zh' ? ' ⚠️ 未达到建议标准。' : ' ⚠️ Below recommendation.')}
+            </p>
+            {sleepSummary.deepSleepNote && <p>{sleepSummary.deepSleepNote}</p>}
+          </div>
+        </div>
+      )}
+
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t('sleepDuration') as string}</h3>
