@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry, SleepEntry, MetricEntry } from '../types';
-import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate } from '../utils';
+import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate, FRACTION_TO_PCT } from '../utils';
 import { useLanguage } from '../LanguageContext';
 import CorrelationMatrix from '../components/CorrelationMatrix';
 import {
@@ -140,7 +140,7 @@ export default function AnalysisTab() {
   const [sleep, setSleep] = useState<SleepEntry[]>([]);
   const [metricData, setMetricData] = useState<Record<string, MetricEntry[]>>({});
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
-  const [trendPeriod, setTrendPeriod] = useState<'30d' | '90d' | '1y'>('90d');
+  const [trendPeriod, setTrendPeriod] = useState<'30d' | '90d' | '1y' | '3y' | 'all'>('90d');
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
   useEffect(() => {
@@ -206,7 +206,10 @@ export default function AnalysisTab() {
       } else {
         // For avg metrics, compute mean of averages
         const total = filtered.reduce((sum, d) => sum + (d.avg ?? 0), 0);
-        map[key] = total / filtered.length;
+        let avg = total / filtered.length;
+        // Transform fraction metrics (0.96) to percentage (96.0) to match assessMetric expectations
+        if (FRACTION_TO_PCT.has(key)) avg = Math.round(avg * 1000) / 10;
+        map[key] = avg;
       }
     });
 
@@ -232,7 +235,7 @@ export default function AnalysisTab() {
   const baseMetrics = useMemo(() => computeMetricsForPeriod(30), [inventory, sleep, metricData]);
 
   // currentMetrics: follows trendPeriod — used for detailed metric cards
-  const periodDays: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365 };
+  const periodDays: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365, '3y': 1095, 'all': 9999 };
   const currentMetrics = useMemo(
     () => computeMetricsForPeriod(periodDays[trendPeriod] || 90),
     [inventory, sleep, metricData, trendPeriod]
@@ -527,7 +530,7 @@ export default function AnalysisTab() {
             {t('detailedAnalysis') as string}
           </h2>
           <div className="flex items-center gap-1 bg-brand-100 dark:bg-brand-800 rounded-lg p-1">
-            {(['30d', '90d', '1y'] as const).map(p => (
+            {(['30d', '90d', '1y', '3y', 'all'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setTrendPeriod(p)}

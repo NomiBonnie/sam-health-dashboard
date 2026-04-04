@@ -692,7 +692,7 @@ export function getPercentileLabel(pct: number, lang: 'en' | 'zh' = 'en'): strin
 // ============================================================
 
 export interface TrendResult {
-  period: '30d' | '90d' | '1y';
+  period: '30d' | '90d' | '1y' | '3y' | 'all';
   slope: number;           // change per day
   totalChange: number;     // slope * days
   direction: 'improving' | 'declining' | 'stable';
@@ -702,14 +702,15 @@ export interface TrendResult {
 
 export function detectTrend(
   data: { date: string; value: number }[],
-  period: '30d' | '90d' | '1y',
+  period: '30d' | '90d' | '1y' | '3y' | 'all',
   invertedBetter = false
 ): TrendResult | null {
-  const days = period === '30d' ? 30 : period === '90d' ? 90 : 365;
+  const periodDaysMap: Record<string, number | null> = { '30d': 30, '90d': 90, '1y': 365, '3y': 1095, 'all': null };
+  const days = periodDaysMap[period];
   const cutoff = new Date('2026-03-17');
-  cutoff.setDate(cutoff.getDate() - days);
+  if (days !== null) cutoff.setDate(cutoff.getDate() - days);
   
-  const filtered = data.filter(d => new Date(d.date) >= cutoff && d.value > 0);
+  const filtered = data.filter(d => days === null ? d.value > 0 : (new Date(d.date) >= cutoff && d.value > 0));
   if (filtered.length < 5) return null;
 
   // Linear regression
