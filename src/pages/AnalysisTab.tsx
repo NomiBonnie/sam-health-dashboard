@@ -183,19 +183,52 @@ export default function AnalysisTab() {
 
   const currentMetrics = useMemo(() => {
     const map: Record<string, number> = {};
+    // Calculate cutoff date based on trendPeriod
+    const exportDate = new Date(DATA_EXPORT_DATE);
+    const periodDays: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365 };
+    const days = periodDays[trendPeriod] || 90;
+    const cutoff = new Date(exportDate);
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    // For metrics with raw data, compute from metricData based on period
+    const metricKeys = Object.keys(metricData);
+    metricKeys.forEach(key => {
+      const entries = metricData[key];
+      if (!entries || entries.length === 0) return;
+      // Skip stale metrics
+      if (!isDataFresh(entries[entries.length - 1]?.date)) return;
+      const filtered = entries.filter(d => d.date >= cutoffStr);
+      if (filtered.length === 0) return;
+      const isSumMetric = ['StepCount', 'DistanceWalkingRunning', 'DistanceCycling', 'ActiveEnergyBurned', 'BasalEnergyBurned', 'AppleExerciseTime', 'FlightsClimbed'].includes(key);
+      if (isSumMetric) {
+        // For sum metrics, compute daily average of sums
+        const total = filtered.reduce((sum, d) => sum + (d.sum ?? d.avg ?? 0), 0);
+        map[key] = total / filtered.length;
+      } else {
+        // For avg metrics, compute mean of averages
+        const total = filtered.reduce((sum, d) => sum + (d.avg ?? 0), 0);
+        map[key] = total / filtered.length;
+      }
+    });
+
+    // Fallback: fill from inventory for metrics not in metricData
     inventory.forEach(item => {
-      // Skip stale metrics — don't include them in analysis
+      if (map[item.shortName] !== undefined) return;
       if (!isDataFresh(item.lastDate)) return;
       const val = item.recent30dAvg ?? item.latestValue ?? 0;
       map[item.shortName] = val;
     });
+
+    // Sleep duration from sleep entries
     if (sleep.length > 0) {
-      const recent30Sleep = sleep.slice(-30);
-      const avgSleep = recent30Sleep.reduce((sum, s) => sum + s.total_hours, 0) / recent30Sleep.length;
+      const filteredSleep = sleep.filter(s => s.date >= cutoffStr);
+      const sleepData = filteredSleep.length > 0 ? filteredSleep : sleep.slice(-30);
+      const avgSleep = sleepData.reduce((sum, s) => sum + s.total_hours, 0) / sleepData.length;
       map.SleepDuration = avgSleep;
     }
     return map;
-  }, [inventory, sleep]);
+  }, [inventory, sleep, metricData, trendPeriod]);
 
   const healthScore = useMemo(() => calculateHealthScore(currentMetrics, lang), [currentMetrics, lang]);
 
