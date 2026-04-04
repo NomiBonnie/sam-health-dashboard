@@ -24,6 +24,7 @@ export const translations = {
     // Analysis Tab
     overallHealthScore: 'Overall Health Score',
     ageAdjustedFor: 'Age-adjusted for 43-year-old male',
+    basedOn30d: 'Based on 30-day baseline',
     lastUpdated: 'Last updated',
     excellent: 'Excellent',
     good: 'Good',
@@ -175,6 +176,7 @@ export const translations = {
     // Analysis Tab
     overallHealthScore: '综合健康评分',
     ageAdjustedFor: '已根据 43 岁男性校准',
+    basedOn30d: '基于近 30 天数据',
     lastUpdated: '最后更新',
     excellent: '优秀',
     good: '良好',

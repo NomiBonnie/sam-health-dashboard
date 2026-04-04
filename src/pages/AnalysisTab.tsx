@@ -338,7 +338,7 @@ export default function AnalysisTab() {
               {t('overallHealthScore') as string}
             </h2>
             <p className="text-sm font-light text-brand-600 dark:text-brand-400">
-              {t('ageAdjustedFor') as string} · {t('lastUpdated') as string}: {DATA_EXPORT_DATE}
+              {t('ageAdjustedFor') as string} · {t('basedOn30d') as string} · {t('lastUpdated') as string}: {DATA_EXPORT_DATE}
             </p>
           </div>
           <div className="text-right">
