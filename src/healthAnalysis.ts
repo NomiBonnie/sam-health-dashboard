@@ -236,7 +236,8 @@ export function calculateHealthScore(metrics: Record<string, number>, lang: 'en'
   const cardiovascular = calcCategoryScore(metrics, cardioMetrics);
   const fitness = calcCategoryScore(metrics, fitnessMetrics);
   const activity = metrics.StepCount ? (metrics.StepCount >= 10000 ? 100 : Math.round((metrics.StepCount / 10000) * 100)) : 0;
-  const sleep = metrics.SleepDuration ? assessMetric('SleepDuration', metrics.SleepDuration)?.level === 'optimal' ? 100 : 60 : 0;
+  const sleepAssessment = metrics.SleepDuration ? assessMetric('SleepDuration', metrics.SleepDuration)?.level : null;
+  const sleep = sleepAssessment ? scoreMap[sleepAssessment] : 0;
 
   const topConcerns: string[] = [];
   const strengths: string[] = [];
@@ -599,7 +600,7 @@ interface PercentileRange {
 const PERCENTILE_TABLES: Record<string, PercentileRange> = {
   RestingHeartRate:         { p5: 48, p10: 52, p25: 58, p50: 66, p75: 74, p90: 80, p95: 86 },
   HeartRateVariabilitySDNN: { p5: 12, p10: 18, p25: 26, p50: 36, p75: 50, p90: 68, p95: 82 },
-  VO2Max:                   { p5: 22, p10: 25, p25: 30, p50: 35, p75: 40, p90: 45, p95: 50 },
+  VO2Max:                   { p5: 24, p10: 30, p25: 34, p50: 36, p75: 39, p90: 44, p95: 48 },
   OxygenSaturation:         { p5: 94, p10: 95, p25: 96, p50: 97, p75: 98, p90: 99, p95: 99.5 },
   BodyMassIndex:            { p5: 20, p10: 21.5, p25: 24, p50: 27, p75: 30, p90: 33, p95: 36 },
   BodyFatPercentage:        { p5: 11, p10: 14, p25: 18, p50: 23, p75: 27, p90: 31, p95: 34 },
