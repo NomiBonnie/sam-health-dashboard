@@ -18,6 +18,8 @@ export const translations = {
     tabMobility: 'Mobility',
     tabEnvironment: 'Environment',
     tabAll: 'All Metrics',
+    vitals: 'Vitals',
+    movement: 'Movement',
     
     // Analysis Tab
     overallHealthScore: 'Overall Health Score',
@@ -148,6 +150,8 @@ export const translations = {
     tabMobility: '行动力',
     tabEnvironment: '环境',
     tabAll: '所有指标',
+    vitals: '生命体征',
+    movement: '运动',
     
     // Analysis Tab
     overallHealthScore: '综合健康评分',

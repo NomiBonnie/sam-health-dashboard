@@ -15,13 +15,10 @@ export default function Header({ me, activeTab, onTabChange }: HeaderProps) {
   const TABS: TabConfig[] = [
     { id: 'overview', label: t('tabOverview') as string, icon: '' },
     { id: 'analysis', label: t('tabAnalysis') as string, icon: '' },
-    { id: 'heart', label: t('tabHeart') as string, icon: '' },
-    { id: 'activity', label: t('tabActivity') as string, icon: '' },
+    { id: 'vitals', label: t('vitals') as string, icon: '' },
+    { id: 'movement', label: t('movement') as string, icon: '' },
     { id: 'sleep', label: t('tabSleep') as string, icon: '' },
-    { id: 'body', label: t('tabBody') as string, icon: '' },
     { id: 'workouts', label: t('tabWorkouts') as string, icon: '' },
-    { id: 'mobility', label: t('tabMobility') as string, icon: '' },
-    { id: 'environment', label: t('tabEnvironment') as string, icon: '' },
     { id: 'all', label: t('tabAll') as string, icon: '' },
   ];
 

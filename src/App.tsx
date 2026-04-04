@@ -3,13 +3,10 @@ import { ThemeProvider } from './ThemeContext';
 import { LanguageProvider } from './LanguageContext';
 import Header from './components/Header';
 import OverviewTab from './pages/OverviewTab';
-import HeartTab from './pages/HeartTab';
-import ActivityTab from './pages/ActivityTab';
+import VitalsTab from './pages/VitalsTab';
+import MovementTab from './pages/MovementTab';
 import SleepTab from './pages/SleepTab';
-import BodyTab from './pages/BodyTab';
 import WorkoutsTab from './pages/WorkoutsTab';
-import MobilityTab from './pages/MobilityTab';
-import EnvironmentTab from './pages/EnvironmentTab';
 import AnalysisTab from './pages/AnalysisTab';
 import AllMetricsTab from './pages/AllMetricsTab';
 import { MeData } from './types';
@@ -27,13 +24,10 @@ function Dashboard() {
     switch (activeTab) {
       case 'overview': return <OverviewTab />;
       case 'analysis': return <AnalysisTab />;
-      case 'heart': return <HeartTab />;
-      case 'activity': return <ActivityTab />;
+      case 'vitals': return <VitalsTab />;
+      case 'movement': return <MovementTab />;
       case 'sleep': return <SleepTab />;
-      case 'body': return <BodyTab />;
       case 'workouts': return <WorkoutsTab />;
-      case 'mobility': return <MobilityTab />;
-      case 'environment': return <EnvironmentTab />;
       case 'all': return <AllMetricsTab />;
       default: return <OverviewTab />;
     }
