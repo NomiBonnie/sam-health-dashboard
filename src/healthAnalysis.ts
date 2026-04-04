@@ -352,6 +352,207 @@ export function compareYears(
 }
 
 // ============================================================
+// PERSONALIZED EXERCISE RECOMMENDATIONS
+// ============================================================
+
+export interface PersonalizedPlan {
+  currentActivities: { type: string; frequency: string; avgDuration: number }[];
+  recommendations: { priority: 'high' | 'medium' | 'low'; text: string; textZh: string }[];
+  weeklyPlan: { day: string; activity: string; activityZh: string }[];
+}
+
+export function generatePersonalizedPlan(
+  metrics: Record<string, number>,
+  workouts: { date: string; type: string; duration_min: number }[],
+  lang: 'en' | 'zh'
+): PersonalizedPlan {
+  // Analyze last 90 days
+  const now = new Date();
+  const cutoff = new Date();
+  cutoff.setDate(now.getDate() - 90);
+
+  const recent = workouts.filter(w => new Date(w.date) >= cutoff);
+
+  // Count by type
+  const typeCounts: Record<string, { count: number; totalDuration: number }> = {};
+  recent.forEach(w => {
+    if (!typeCounts[w.type]) typeCounts[w.type] = { count: 0, totalDuration: 0 };
+    typeCounts[w.type].count++;
+    typeCounts[w.type].totalDuration += w.duration_min;
+  });
+
+  const currentActivities = Object.entries(typeCounts)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 5)
+    .map(([type, stats]) => {
+      const weeksInPeriod = 13; // ~90 days
+      const perWeek = stats.count / weeksInPeriod;
+      let frequency: string;
+      if (perWeek >= 5) frequency = lang === 'zh' ? '几乎每天' : 'Almost daily';
+      else if (perWeek >= 2) frequency = lang === 'zh' ? `每周${Math.round(perWeek)}次` : `${Math.round(perWeek)}x/week`;
+      else if (perWeek >= 0.5) frequency = lang === 'zh' ? `每月${Math.round(stats.count / 3)}次` : `${Math.round(stats.count / 3)}x/month`;
+      else frequency = lang === 'zh' ? '偶尔' : 'Occasional';
+
+      return {
+        type,
+        frequency,
+        avgDuration: Math.round(stats.totalDuration / stats.count),
+      };
+    });
+
+  // Detect patterns
+  const hasSwimming = (typeCounts['Swimming']?.count ?? 0) >= 2;
+  const hasWalking = (typeCounts['Walking']?.count ?? 0) >= 3;
+  const hasCycling = (typeCounts['Cycling']?.count ?? 0) >= 2;
+  const hasRunning = (typeCounts['Running']?.count ?? 0) >= 2;
+  const hasHIIT = (typeCounts['HighIntensityIntervalTraining']?.count ?? 0) >= 1;
+  const totalWeeklyWorkouts = recent.length / 13;
+
+  // Generate recommendations based on actual metrics and activity
+  const recommendations: PersonalizedPlan['recommendations'] = [];
+
+  // BMI/body fat concerns
+  const bmi = metrics.BodyMassIndex;
+  const vo2 = metrics.VO2Max;
+  const rhr = metrics.RestingHeartRate;
+  const steps = metrics.StepCount;
+
+  if (bmi && bmi > 25) {
+    if (hasSwimming) {
+      recommendations.push({
+        priority: 'high',
+        text: 'Increase swimming to 3x/week with longer sessions (45-60min). Swimming is excellent for weight management with low joint impact.',
+        textZh: '将游泳增加到每周3次，每次45-60分钟。游泳是低关节冲击的优秀减重运动。',
+      });
+    } else if (hasWalking) {
+      recommendations.push({
+        priority: 'high',
+        text: 'Progress from walking to brisk walking/jogging intervals. Start with 5min jog / 5min walk alternating for 30min.',
+        textZh: '从步行逐步过渡到快走/慢跑间歇。从5分钟慢跑/5分钟步行交替开始，持续30分钟。',
+      });
+    } else {
+      recommendations.push({
+        priority: 'high',
+        text: 'Add 3x/week moderate cardio (swimming, cycling, or brisk walking) for 30-45min to support weight loss.',
+        textZh: '每周增加3次中等强度有氧运动（游泳、骑行或快走），每次30-45分钟，帮助减重。',
+      });
+    }
+  }
+
+  if (vo2 && vo2 < 35) {
+    if (hasSwimming) {
+      recommendations.push({
+        priority: 'high',
+        text: 'Add swim intervals: 50m fast / 50m easy × 10 sets. This will boost VO₂ Max more effectively than steady-pace swimming.',
+        textZh: '加入游泳间歇训练：50米快游/50米放松 × 10组。比匀速游泳更能有效提升最大摄氧量。',
+      });
+    } else {
+      recommendations.push({
+        priority: 'high',
+        text: 'Add 2x/week high-intensity intervals to improve VO₂ Max. Try 4min hard / 3min rest × 4 rounds.',
+        textZh: '每周增加2次高强度间歇训练提升最大摄氧量。尝试4分钟高强度/3分钟休息 × 4轮。',
+      });
+    }
+  }
+
+  if (totalWeeklyWorkouts < 3) {
+    recommendations.push({
+      priority: 'high',
+      text: `You're averaging ${totalWeeklyWorkouts.toFixed(1)} workouts/week. Aim for at least 3-4 sessions. Consistency matters more than intensity.`,
+      textZh: `您平均每周运动${totalWeeklyWorkouts.toFixed(1)}次。建议至少3-4次。一致性比强度更重要。`,
+    });
+  }
+
+  if (rhr && rhr > 70 && !hasHIIT) {
+    recommendations.push({
+      priority: 'medium',
+      text: 'Your resting heart rate could improve. Add 1-2 sessions of sustained moderate cardio (zone 2 training, 30-45min).',
+      textZh: '您的静息心率有改善空间。增加1-2次持续中等强度有氧（二区训练，30-45分钟）。',
+    });
+  }
+
+  if (steps && steps < 7500 && hasWalking) {
+    recommendations.push({
+      priority: 'medium',
+      text: 'Great that you walk regularly! Try to increase daily steps to 10,000 by adding a 20-min evening walk.',
+      textZh: '坚持步行很好！试着增加一次20分钟的晚间散步，将每日步数提升到10,000步。',
+    });
+  }
+
+  // Add strength training if not doing any
+  const hasStrength = (typeCounts['CoreTraining']?.count ?? 0) >= 1 ||
+    (typeCounts['FunctionalStrengthTraining']?.count ?? 0) >= 1;
+  if (!hasStrength) {
+    recommendations.push({
+      priority: 'medium',
+      text: 'No strength training detected. Add 2x/week full-body resistance training for muscle preservation and metabolism.',
+      textZh: '未检测到力量训练。每周增加2次全身力量训练，保持肌肉量和代谢水平。',
+    });
+  }
+
+  // Limit to top 3
+  recommendations.sort((a, b) => {
+    const p = { high: 0, medium: 1, low: 2 };
+    return p[a.priority] - p[b.priority];
+  });
+  const top3 = recommendations.slice(0, 3);
+
+  // Generate weekly plan based on actual activities
+  const weeklyPlan: PersonalizedPlan['weeklyPlan'] = [];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const daysZh = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+  if (hasSwimming && hasWalking) {
+    const plan = [
+      { en: 'Swimming 45min', zh: '游泳45分钟' },
+      { en: 'Brisk Walking 40min', zh: '快走40分钟' },
+      { en: 'Rest or Light Stretching', zh: '休息或轻度拉伸' },
+      { en: 'Swimming 45min', zh: '游泳45分钟' },
+      { en: 'Walking 30min + Core 15min', zh: '步行30分钟 + 核心训练15分钟' },
+      { en: 'Swimming 50min (intervals)', zh: '游泳50分钟（间歇训练）' },
+      { en: 'Easy Walk 60min', zh: '轻松散步60分钟' },
+    ];
+    plan.forEach((p, i) => weeklyPlan.push({ day: days[i], activity: p.en, activityZh: p.zh }));
+  } else if (hasSwimming) {
+    const plan = [
+      { en: 'Swimming 45min', zh: '游泳45分钟' },
+      { en: 'Walking 30min', zh: '步行30分钟' },
+      { en: 'Rest', zh: '休息' },
+      { en: 'Swimming 45min', zh: '游泳45分钟' },
+      { en: 'Core Training 20min', zh: '核心训练20分钟' },
+      { en: 'Swimming 50min', zh: '游泳50分钟' },
+      { en: 'Easy Walk 40min', zh: '轻松散步40分钟' },
+    ];
+    plan.forEach((p, i) => weeklyPlan.push({ day: days[i], activity: p.en, activityZh: p.zh }));
+  } else if (hasCycling) {
+    const plan = [
+      { en: 'Cycling 40min', zh: '骑行40分钟' },
+      { en: 'Walking 30min', zh: '步行30分钟' },
+      { en: 'Rest', zh: '休息' },
+      { en: 'Cycling 45min (intervals)', zh: '骑行45分钟（间歇）' },
+      { en: 'Core Training 20min', zh: '核心训练20分钟' },
+      { en: 'Cycling 60min (long ride)', zh: '骑行60分钟（长骑）' },
+      { en: 'Easy Walk 40min', zh: '轻松散步40分钟' },
+    ];
+    plan.forEach((p, i) => weeklyPlan.push({ day: days[i], activity: p.en, activityZh: p.zh }));
+  } else {
+    // Default walking-based plan
+    const plan = [
+      { en: 'Brisk Walking 40min', zh: '快走40分钟' },
+      { en: 'Walk/Jog Intervals 30min', zh: '走跑交替30分钟' },
+      { en: 'Rest or Stretching', zh: '休息或拉伸' },
+      { en: 'Brisk Walking 40min', zh: '快走40分钟' },
+      { en: 'Core Training 20min', zh: '核心训练20分钟' },
+      { en: 'Walk/Jog 45min', zh: '走跑45分钟' },
+      { en: 'Easy Walk 60min', zh: '轻松散步60分钟' },
+    ];
+    plan.forEach((p, i) => weeklyPlan.push({ day: days[i], activity: p.en, activityZh: p.zh }));
+  }
+
+  return { currentActivities, recommendations: top3, weeklyPlan };
+}
+
+// ============================================================
 // PERCENTILE COMPARISON (vs 43-year-old males)
 // Based on clinical research: NHANES, Cooper Clinic, Framingham
 // ============================================================

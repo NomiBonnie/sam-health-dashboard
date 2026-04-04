@@ -5,9 +5,9 @@ import { useLanguage } from '../LanguageContext';
 import {
   assessMetric, calculateHealthScore, getRiskLevel, getLevelColor, getLevelBg,
   calculatePercentile, getPercentileLabel, detectTrend, analyzeSleepStages,
-  analyzeActivityRings, getDetailedAnalysis, compareYears,
+  analyzeActivityRings, getDetailedAnalysis, compareYears, generatePersonalizedPlan,
   type MetricAssessment, type TrendResult, type SleepStageAnalysis, type ActivityBreakdown,
-  type YearComparison,
+  type YearComparison, type PersonalizedPlan,
 } from '../healthAnalysis';
 
 function TrendBadge({ trend }: { trend: TrendResult }) {
@@ -122,12 +122,23 @@ function ActivityRingsCard({ rings, title, avgLabel }: { rings: ActivityBreakdow
   );
 }
 
+interface WorkoutEntry {
+  date: string;
+  type: string;
+  duration_min: number;
+  distance_km?: number;
+  calories?: number;
+  source?: string;
+  startDate?: string;
+}
+
 export default function AnalysisTab() {
   const { lang, t } = useLanguage();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [sleep, setSleep] = useState<SleepEntry[]>([]);
   const [metricData, setMetricData] = useState<Record<string, MetricEntry[]>>({});
+  const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [trendPeriod, setTrendPeriod] = useState<'30d' | '90d' | '1y'>('90d');
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
@@ -135,6 +146,7 @@ export default function AnalysisTab() {
     fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
     fetchJson<SleepEntry[]>('/data/sleep.json').then(setSleep);
+    fetchJson<WorkoutEntry[]>('/data/workouts.json').then(setWorkouts).catch(() => setWorkouts([]));
 
     const metricFiles = [
       'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max',
@@ -212,6 +224,11 @@ export default function AnalysisTab() {
       .filter(Boolean) as YearComparison[];
   }, [metricData]);
 
+  const personalizedPlan = useMemo(() => {
+    if (workouts.length === 0) return null;
+    return generatePersonalizedPlan(currentMetrics, workouts, lang);
+  }, [currentMetrics, workouts, lang]);
+
   const riskLevelText = (level: MetricAssessment['level']): string => {
     const map: Record<string, string> = {
       optimal: t('riskOptimal') as string,
@@ -270,6 +287,84 @@ export default function AnalysisTab() {
           ))}
         </div>
       </div>
+
+      {/* Personalized Plan - after overall score */}
+      {personalizedPlan && (
+        <div className="card p-6">
+          <h3 className="text-lg font-light tracking-tight text-brand-900 dark:text-brand-100 mb-4">
+            🏋️ {t('personalizedPlan') as string}
+          </h3>
+
+          {/* Current Activity Pattern */}
+          <div className="mb-5">
+            <h4 className="text-xs font-medium tracking-luxury uppercase text-brand-500 mb-3">
+              {t('currentPattern') as string}
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {personalizedPlan.currentActivities.map(a => (
+                <span key={a.type} className="px-3 py-1.5 text-sm bg-brand-100 dark:bg-brand-800 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-700 rounded-lg">
+                  {a.type} · {a.frequency} · ~{a.avgDuration}{lang === 'zh' ? '分钟' : 'min'}
+                </span>
+              ))}
+              {personalizedPlan.currentActivities.length === 0 && (
+                <span className="text-sm text-brand-500">{lang === 'zh' ? '近90天无运动记录' : 'No workouts in last 90 days'}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Top Recommendations */}
+          <div className="mb-5">
+            <h4 className="text-xs font-medium tracking-luxury uppercase text-brand-500 mb-3">
+              {t('recommendation') as string}
+            </h4>
+            <div className="space-y-3">
+              {personalizedPlan.recommendations.map((rec, i) => {
+                const priorityColors: Record<string, string> = {
+                  high: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/10',
+                  medium: 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/10',
+                  low: 'border-brand-200 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/10',
+                };
+                const priorityLabels: Record<string, string> = {
+                  high: lang === 'zh' ? '高' : 'HIGH',
+                  medium: lang === 'zh' ? '中' : 'MED',
+                  low: lang === 'zh' ? '低' : 'LOW',
+                };
+                return (
+                  <div key={i} className={`p-3 rounded-lg border ${priorityColors[rec.priority]}`}>
+                    <div className="flex items-start gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${rec.priority === 'high' ? 'bg-red-200 dark:bg-red-800 text-red-700 dark:text-red-300' : rec.priority === 'medium' ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-300' : 'bg-brand-200 dark:bg-brand-700 text-brand-600'}`}>
+                        {priorityLabels[rec.priority]}
+                      </span>
+                      <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed">
+                        {lang === 'zh' ? rec.textZh : rec.text}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Weekly Schedule */}
+          <div>
+            <h4 className="text-xs font-medium tracking-luxury uppercase text-brand-500 mb-3">
+              {t('weeklySchedule') as string}
+            </h4>
+            <div className="grid grid-cols-7 gap-1">
+              {personalizedPlan.weeklyPlan.map(d => (
+                <div key={d.day} className="text-center p-2 bg-brand-50 dark:bg-brand-800/50 rounded-lg">
+                  <div className="text-xs font-medium text-brand-900 dark:text-brand-100 mb-1">
+                    {lang === 'zh' ? d.activityZh.split(' ')[0] : d.day.slice(0, 3)}
+                  </div>
+                  <div className="text-[10px] text-brand-500 leading-tight">
+                    {lang === 'zh' ? d.activityZh : d.activity}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Strengths + Concerns */}
       {healthScore.strengths.length > 0 && (

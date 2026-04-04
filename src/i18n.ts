@@ -135,6 +135,11 @@ export const translations = {
     vsLastYear: 'vs last year',
     noData: 'Insufficient data',
 
+    // Personalized Plan
+    personalizedPlan: 'Personalized Exercise Plan',
+    currentPattern: 'Current Activity Pattern',
+    weeklySchedule: 'Suggested Weekly Schedule',
+
     // Footer
     appleHealthExport: 'Apple Health Export',
   },
@@ -271,6 +276,11 @@ export const translations = {
     yearComparison: '年度对比',
     vsLastYear: '较去年',
     noData: '数据不足',
+
+    // Personalized Plan
+    personalizedPlan: '个性化运动方案',
+    currentPattern: '当前运动模式',
+    weeklySchedule: '每周建议',
 
     // Footer
     appleHealthExport: 'Apple Health 导出',
