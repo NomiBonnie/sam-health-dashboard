@@ -29,7 +29,7 @@ function PercentileBar({ percentile, label, lang }: { percentile: number; label:
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-brand-500 mb-1">
         <span>{label}</span>
-        <span className="font-medium">{getPercentileLabel(percentile, lang)} ({percentile}th)</span>
+        <span className="font-medium">{getPercentileLabel(percentile, lang)} ({percentile}{percentile % 10 === 1 && percentile !== 11 ? 'st' : percentile % 10 === 2 && percentile !== 12 ? 'nd' : percentile % 10 === 3 && percentile !== 13 ? 'rd' : 'th'})</span>
       </div>
       <div className="w-full h-2 bg-brand-200 dark:bg-brand-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${percentile}%` }} />
@@ -200,6 +200,13 @@ export default function AnalysisTab() {
 
   const INVERTED_BETTER = new Set(['RestingHeartRate', 'BodyMassIndex', 'BodyFatPercentage']);
 
+  // Build lastDate lookup for data-age annotations
+  const lastDateMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    inventory.forEach(item => { m[item.shortName] = item.lastDate; });
+    return m;
+  }, [inventory]);
+
   const keyAssessments = useMemo(() => {
     const keys = [
       'RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation',
@@ -208,19 +215,23 @@ export default function AnalysisTab() {
     ];
     return keys
       .map(k => {
-        // If metric is stale, return a stale marker instead
+        // If metric is stale (>90d), return a stale marker instead
         if (staleMetrics[k]) {
-          return { key: k, stale: true, lastDate: staleMetrics[k], assessment: null, percentile: null, trend: null };
+          return { key: k, stale: true, lastDate: staleMetrics[k], assessment: null, percentile: null, trend: null, nearStale: false };
         }
         const assessment = assessMetric(k, currentMetrics[k], lang);
         if (!assessment) return null;
-        const percentile = calculatePercentile(k, currentMetrics[k]);
+        // Skip percentile for OxygenSaturation — SpO2 has too narrow a clinical range for population comparison to be meaningful
+        const percentile = k === 'OxygenSaturation' ? null : calculatePercentile(k, currentMetrics[k]);
         const trendData = metricData[k]?.map(d => ({ date: d.date, value: d.avg })) || [];
         const trend = detectTrend(trendData, trendPeriod, INVERTED_BETTER.has(k));
-        return { key: k, stale: false, lastDate: null, assessment, percentile, trend };
+        // Mark metrics with data older than 30 days as "near-stale" for annotation
+        const ld = lastDateMap[k];
+        const nearStale = ld ? !isDataFresh(ld, 30) : false;
+        return { key: k, stale: false, lastDate: ld || null, assessment, percentile, trend, nearStale };
       })
-      .filter(Boolean) as ({ key: string; stale: boolean; lastDate: string | null; assessment: MetricAssessment | null; percentile: number | null; trend: TrendResult | null })[];
-  }, [currentMetrics, metricData, trendPeriod, staleMetrics]);
+      .filter(Boolean) as ({ key: string; stale: boolean; lastDate: string | null; assessment: MetricAssessment | null; percentile: number | null; trend: TrendResult | null; nearStale: boolean })[];
+  }, [currentMetrics, metricData, trendPeriod, staleMetrics, lastDateMap]);
 
   const sleepStages = useMemo(() => analyzeSleepStages(sleep, lang), [sleep, lang]);
   const activityRings = useMemo(() => analyzeActivityRings(activity), [activity]);
@@ -485,7 +496,7 @@ export default function AnalysisTab() {
           </div>
         </div>
         <div className="space-y-4">
-          {keyAssessments.map(({ key, stale, lastDate, assessment, percentile, trend }) => {
+          {keyAssessments.map(({ key, stale, lastDate, assessment, percentile, trend, nearStale }) => {
             // Stale metric card
             if (stale) {
               return (
@@ -529,6 +540,11 @@ export default function AnalysisTab() {
                 <p className="text-sm font-light text-brand-700 dark:text-brand-300 leading-relaxed mb-2">
                   {assessment.interpretation}
                 </p>
+                {nearStale && lastDate && (
+                  <p className="text-xs font-light text-amber-600 dark:text-amber-400 mb-2">
+                    ⚠️ {lang === 'zh' ? `数据日期: ${lastDate}` : `Data from: ${lastDate}`}
+                  </p>
+                )}
                 {percentile !== null && <PercentileBar percentile={percentile} label={t('percentileVs') as string} lang={lang} />}
                 {assessment.recommendation && (
                   <div className="pt-3 mt-3 border-t border-brand-200 dark:border-brand-700">

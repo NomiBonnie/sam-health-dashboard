@@ -107,11 +107,11 @@ const STANDARDS: Record<string, HealthStandard> = {
   SleepDuration: {
     metric: 'Sleep Duration',
     unit: 'hours',
-    optimal: [7, 8],
-    good: [6.5, 7],
-    normal: [6, 6.5],
-    concern: [5, 6],
-    warning: [0, 5],
+    optimal: [7.5, 9],
+    good: [7, 7.5],
+    normal: [6.5, 7],
+    concern: [5.5, 6.5],
+    warning: [0, 5.5],
     source: 'NSF adult (40-49)',
   },
   WalkingSpeed: {
@@ -512,12 +512,31 @@ export function generatePersonalizedPlan(
   });
   const top3 = recommendations.slice(0, 3);
 
-  // Generate weekly plan based on actual activities
+  // Generate weekly plan based on actual activities AND current volume
   const weeklyPlan: PersonalizedPlan['weeklyPlan'] = [];
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const daysZh = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
-  if (hasSwimming && hasWalking) {
+  // Adapt plan intensity based on current workout frequency
+  // If < 2x/week, give a gentle starter plan (3 active days + 4 rest/light)
+  // If 2-4x/week, moderate plan (4-5 active days)
+  // If > 4x/week, full plan
+  const isStarter = totalWeeklyWorkouts < 2;
+  const primaryActivity = currentActivities.length > 0 ? currentActivities[0].type : 'Walking';
+
+  if (isStarter) {
+    // Gentle starter plan: 3 active days, build from current habits
+    const plan = [
+      { en: `${primaryActivity} 30min`, zh: `${primaryActivity === 'Walking' ? '步行' : primaryActivity === 'Cycling' ? '骑行' : primaryActivity}30分钟` },
+      { en: 'Rest', zh: '休息' },
+      { en: 'Easy Walk 20min', zh: '轻松散步20分钟' },
+      { en: 'Rest', zh: '休息' },
+      { en: `${primaryActivity} 30min`, zh: `${primaryActivity === 'Walking' ? '步行' : primaryActivity === 'Cycling' ? '骑行' : primaryActivity}30分钟` },
+      { en: 'Easy Walk 30min', zh: '轻松散步30分钟' },
+      { en: 'Rest', zh: '休息' },
+    ];
+    plan.forEach((p, i) => weeklyPlan.push({ day: days[i], activity: p.en, activityZh: p.zh }));
+  } else if (hasSwimming && hasWalking) {
     const plan = [
       { en: 'Swimming 45min', zh: '游泳45分钟' },
       { en: 'Brisk Walking 40min', zh: '快走40分钟' },
