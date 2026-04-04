@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry, SleepEntry, MetricEntry } from '../types';
 import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate } from '../utils';
 import { useLanguage } from '../LanguageContext';
+import CorrelationMatrix from '../components/CorrelationMatrix';
 import {
   assessMetric, calculateHealthScore, getRiskLevel, getLevelColor, getLevelBg,
   calculatePercentile, getPercentileLabel, detectTrend, analyzeSleepStages,
@@ -610,6 +611,9 @@ export default function AnalysisTab() {
           {t('disclaimerText') as string}
         </p>
       </div>
+
+      {/* Metric Correlations */}
+      <CorrelationMatrix />
     </div>
   );
 }

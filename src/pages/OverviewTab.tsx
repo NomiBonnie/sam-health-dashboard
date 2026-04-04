@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry } from '../types';
 import { fetchJson, getMetricDisplayName, getMetricUnit, isDataFresh } from '../utils';
 import { useLanguage } from '../LanguageContext';
+import HealthHeatmap from '../components/HealthHeatmap';
 
 export default function OverviewTab() {
   const { lang, t } = useLanguage();
@@ -124,6 +125,8 @@ export default function OverviewTab() {
           })}
         </div>
       </div>
+      {/* Health Heatmap */}
+      <HealthHeatmap />
     </div>
   );
 }
