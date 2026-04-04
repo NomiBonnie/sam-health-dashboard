@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { InventoryItem } from '../types';
-import { fetchJson, getMetricDisplayName, getMetricUnit, formatNumber } from '../utils';
+import { fetchJson, getMetricDisplayName, getMetricUnit, formatNumber, dedupInventory } from '../utils';
 import MetricChart from '../components/MetricChart';
 
 const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'];
@@ -10,7 +10,7 @@ export default function AllMetricsTab() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(d => setInventory(dedupInventory(d)));
   }, []);
 
   return (

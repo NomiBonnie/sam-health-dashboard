@@ -149,6 +149,27 @@ export function transformValue(shortName: string, value: number): number {
   return value;
 }
 
+// Metrics with confirmed multi-source double-counting in Apple Health exports.
+// Calibration factor derived from Apple Health's deduplicated display vs raw export sum.
+// StepCount: Apple shows 7,331/day vs export 13,395/day = 0.547x (verified 2026-03-17)
+// DistanceWalkingRunning: 9.5 km raw → 5.2 km corrected (matches 7k steps * 0.75m stride)
+export const DOUBLE_COUNTED_METRICS = new Set(['StepCount', 'DistanceWalkingRunning']);
+export const DEDUP_FACTOR = 0.547;
+
+/** Apply deduplication factor to inventory items that suffer from multi-source double-counting */
+export function dedupInventory<T extends { shortName: string; recent30dAvg: number; latestValue: number; overallAvg: number }>(items: T[]): T[] {
+  return items.map(item => {
+    if (!DOUBLE_COUNTED_METRICS.has(item.shortName)) return item;
+    return {
+      ...item,
+      recent30dAvg: Math.round(item.recent30dAvg * DEDUP_FACTOR),
+      overallAvg: Math.round(item.overallAvg * DEDUP_FACTOR),
+      // latestValue may already be correct (single source on that day), but apply for consistency
+      latestValue: Math.round(item.latestValue * DEDUP_FACTOR),
+    };
+  });
+}
+
 export function getDisplayField(shortName: string): 'sum' | 'avg' {
   return SUM_METRICS.has(shortName) ? 'sum' : 'avg';
 }

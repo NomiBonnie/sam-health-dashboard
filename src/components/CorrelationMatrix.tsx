@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MetricEntry } from '../types';
-import { fetchJson } from '../utils';
+import { fetchJson, DOUBLE_COUNTED_METRICS, DEDUP_FACTOR } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 import { calculateCorrelations, CorrelationResult } from '../correlationAnalysis';
@@ -36,7 +36,12 @@ export default function CorrelationMatrix() {
     Promise.all([
       ...files.map(name =>
         fetchJson<MetricEntry[]>(`/data/metrics/${name}.json`)
-          .then(data => ({ name, data }))
+          .then(data => ({
+            name,
+            data: DOUBLE_COUNTED_METRICS.has(name)
+              ? data.map(d => ({ ...d, sum: d.sum * DEDUP_FACTOR, avg: d.avg * DEDUP_FACTOR }))
+              : data
+          }))
           .catch(() => ({ name, data: [] as MetricEntry[] }))
       ),
       // Sleep data comes from sleep.json, not metrics/SleepDuration.json

@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import { MetricEntry, TimeRange } from '../types';
-import { fetchJson, filterByTimeRange, sampleData, getMetricDisplayName, getMetricUnit, getTrend, getDisplayField, transformValue, FRACTION_TO_PCT } from '../utils';
+import { fetchJson, filterByTimeRange, sampleData, getMetricDisplayName, getMetricUnit, getTrend, getDisplayField, transformValue, FRACTION_TO_PCT, DOUBLE_COUNTED_METRICS, DEDUP_FACTOR } from '../utils';
 import { useTheme } from '../ThemeContext';
 import TimeRangeSelector from './TimeRangeSelector';
 
@@ -26,6 +26,10 @@ export default function MetricChart({ metricName, chartType = 'line', color = '#
   useEffect(() => {
     setLoading(true);
     fetchJson<MetricEntry[]>(`/data/metrics/${metricName}.json`)
+      .then(d => DOUBLE_COUNTED_METRICS.has(metricName)
+        ? d.map(e => ({ ...e, sum: e.sum * DEDUP_FACTOR, avg: e.avg * DEDUP_FACTOR }))
+        : d
+      )
       .then(setData)
       .catch(() => setData([]))
       .finally(() => setLoading(false));

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry } from '../types';
-import { fetchJson, getMetricDisplayName, getMetricUnit, isDataFresh } from '../utils';
+import { fetchJson, getMetricDisplayName, getMetricUnit, isDataFresh, dedupInventory } from '../utils';
 import { useLanguage } from '../LanguageContext';
 import HealthHeatmap from '../components/HealthHeatmap';
 
@@ -10,7 +10,7 @@ export default function OverviewTab() {
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
   useEffect(() => {
-    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(d => setInventory(dedupInventory(d)));
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
   }, []);
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { MetricEntry } from '../types';
-import { fetchJson } from '../utils';
+import { fetchJson, DOUBLE_COUNTED_METRICS, DEDUP_FACTOR } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 
@@ -105,7 +105,12 @@ export default function HealthHeatmap() {
     Promise.all([
       ...metricFiles.map(f =>
         fetchJson<MetricEntry[]>(`/data/metrics/${METRIC_CONFIG[f].file}.json`)
-          .then(d => ({ key: f, data: d }))
+          .then(d => ({
+            key: f,
+            data: DOUBLE_COUNTED_METRICS.has(f)
+              ? d.map(e => ({ ...e, sum: e.sum * DEDUP_FACTOR, avg: e.avg * DEDUP_FACTOR }))
+              : d
+          }))
           .catch(() => ({ key: f, data: [] as MetricEntry[] }))
       ),
       // Sleep data from sleep.json

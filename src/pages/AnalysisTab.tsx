@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry, SleepEntry, MetricEntry } from '../types';
-import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate, FRACTION_TO_PCT } from '../utils';
+import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate, FRACTION_TO_PCT, DOUBLE_COUNTED_METRICS, DEDUP_FACTOR, dedupInventory } from '../utils';
 import { useLanguage } from '../LanguageContext';
 import CorrelationMatrix from '../components/CorrelationMatrix';
 import {
@@ -144,7 +144,7 @@ export default function AnalysisTab() {
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(d => setInventory(dedupInventory(d)));
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
     fetchJson<SleepEntry[]>('/data/sleep.json').then(setSleep);
     fetchJson<WorkoutEntry[]>('/data/workouts.json').then(setWorkouts).catch(() => setWorkouts([]));
@@ -202,7 +202,10 @@ export default function AnalysisTab() {
       if (isSumMetric) {
         // For sum metrics, compute daily average of sums
         const total = filtered.reduce((sum, d) => sum + (d.sum ?? d.avg ?? 0), 0);
-        map[key] = total / filtered.length;
+        let val = total / filtered.length;
+        // Correct for multi-source double-counting (iPhone + Apple Watch)
+        if (DOUBLE_COUNTED_METRICS.has(key)) val *= DEDUP_FACTOR;
+        map[key] = val;
       } else {
         // For avg metrics, compute mean of averages
         const total = filtered.reduce((sum, d) => sum + (d.avg ?? 0), 0);

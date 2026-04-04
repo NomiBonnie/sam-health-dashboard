@@ -5,7 +5,7 @@ import {
 import MetricChart from '../components/MetricChart';
 import TimeRangeSelector from '../components/TimeRangeSelector';
 import { ActivityEntry, InventoryItem, TimeRange } from '../types';
-import { fetchJson, filterByTimeRange, sampleData, isDataFresh } from '../utils';
+import { fetchJson, filterByTimeRange, sampleData, isDataFresh, dedupInventory } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 import { assessMetric, type MetricAssessment } from '../healthAnalysis';
@@ -26,7 +26,7 @@ export default function MovementTab() {
 
   useEffect(() => {
     fetchJson<ActivityEntry[]>('/data/activity.json').then(setActivity);
-    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(d => setInventory(dedupInventory(d)));
   }, []);
 
   const filtered = useMemo(() => sampleData(filterByTimeRange(activity, range), 90), [activity, range]);

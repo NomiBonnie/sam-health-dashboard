@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import MetricChart from '../components/MetricChart';
 import { useLanguage } from '../LanguageContext';
 import { InventoryItem } from '../types';
-import { fetchJson, isDataFresh, getMetricDisplayName } from '../utils';
+import { fetchJson, isDataFresh, getMetricDisplayName, dedupInventory } from '../utils';
 import { assessMetric, type MetricAssessment } from '../healthAnalysis';
 
 function StatusDot({ level }: { level: MetricAssessment['level'] }) {
@@ -21,7 +21,7 @@ export default function VitalsTab() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
-    fetchJson<InventoryItem[]>('/data/inventory.json').then(setInventory);
+    fetchJson<InventoryItem[]>('/data/inventory.json').then(d => setInventory(dedupInventory(d)));
   }, []);
 
   const summary = useMemo(() => {
