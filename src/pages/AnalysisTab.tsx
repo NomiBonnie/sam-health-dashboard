@@ -156,7 +156,7 @@ export default function AnalysisTab() {
   const currentMetrics = useMemo(() => {
     const map: Record<string, number> = {};
     inventory.forEach(item => {
-      const val = item.latestValue ?? item.recent30dAvg ?? 0;
+      const val = item.recent30dAvg ?? item.latestValue ?? 0;
       map[item.shortName] = val;
     });
     if (sleep.length > 0) {
