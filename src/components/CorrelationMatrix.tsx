@@ -29,17 +29,24 @@ export default function CorrelationMatrix() {
 
   useEffect(() => {
     const files = [
-      'StepCount', 'SleepDuration', 'RestingHeartRate',
+      'StepCount', 'RestingHeartRate',
       'HeartRateVariabilitySDNN', 'ActiveEnergyBurned',
-      'WalkingSpeed', 'VO2Max',
+      'WalkingSpeed', 'FlightsClimbed',
     ];
-    Promise.all(
-      files.map(name =>
+    Promise.all([
+      ...files.map(name =>
         fetchJson<MetricEntry[]>(`/data/metrics/${name}.json`)
           .then(data => ({ name, data }))
           .catch(() => ({ name, data: [] as MetricEntry[] }))
-      )
-    ).then(results => {
+      ),
+      // Sleep data comes from sleep.json, not metrics/SleepDuration.json
+      fetchJson<{ date: string; total_hours: number }[]>('/data/sleep.json')
+        .then(data => ({
+          name: 'SleepDuration',
+          data: data.map(d => ({ date: d.date, avg: d.total_hours, min: d.total_hours, max: d.total_hours, sum: d.total_hours } as MetricEntry))
+        }))
+        .catch(() => ({ name: 'SleepDuration', data: [] as MetricEntry[] }))
+    ]).then(results => {
       const map: Record<string, MetricEntry[]> = {};
       results.forEach(r => { map[r.name] = r.data; });
       setMetricData(map);

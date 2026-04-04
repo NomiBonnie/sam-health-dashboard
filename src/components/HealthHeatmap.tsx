@@ -101,14 +101,21 @@ export default function HealthHeatmap() {
 
   // Load all metric data once
   useEffect(() => {
-    const files: HeatmapMetric[] = ['StepCount', 'SleepDuration', 'RestingHeartRate', 'ActiveEnergyBurned'];
-    Promise.all(
-      files.map(f =>
+    const metricFiles: HeatmapMetric[] = ['StepCount', 'RestingHeartRate', 'ActiveEnergyBurned'];
+    Promise.all([
+      ...metricFiles.map(f =>
         fetchJson<MetricEntry[]>(`/data/metrics/${METRIC_CONFIG[f].file}.json`)
           .then(d => ({ key: f, data: d }))
           .catch(() => ({ key: f, data: [] as MetricEntry[] }))
-      )
-    ).then(results => {
+      ),
+      // Sleep data from sleep.json
+      fetchJson<{ date: string; total_hours: number }[]>('/data/sleep.json')
+        .then(d => ({
+          key: 'SleepDuration' as HeatmapMetric,
+          data: d.map(s => ({ date: s.date, avg: s.total_hours, min: s.total_hours, max: s.total_hours, sum: s.total_hours } as MetricEntry))
+        }))
+        .catch(() => ({ key: 'SleepDuration' as HeatmapMetric, data: [] as MetricEntry[] }))
+    ]).then(results => {
       const map: Record<string, MetricEntry[]> = {};
       results.forEach(r => { map[r.key] = r.data; });
       setData(map);

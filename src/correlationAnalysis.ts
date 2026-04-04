@@ -107,7 +107,7 @@ export function calculateCorrelations(metricData: Record<string, MetricEntry[]>)
   const steps = buildDateMap(metricData['StepCount'] || [], 'sum');
   const energy = buildDateMap(metricData['ActiveEnergyBurned'] || [], 'sum');
   const walkSpeed = buildDateMap(metricData['WalkingSpeed'] || [], 'avg');
-  const vo2max = buildDateMap(metricData['VO2Max'] || [], 'avg');
+  const flights = buildDateMap(metricData['FlightsClimbed'] || [], 'sum');
 
   const definitions: {
     metricA: string; metricB: string;
@@ -115,19 +115,29 @@ export function calculateCorrelations(metricData: Record<string, MetricEntry[]>)
     align: () => { x: number[]; y: number[] };
   }[] = [
     {
+      metricA: 'StepCount', metricB: 'ActiveEnergyBurned',
+      labelEn: 'Steps vs Active Energy', labelZh: '步数 vs 活动能量',
+      align: () => alignSameDay(steps, energy),
+    },
+    {
+      metricA: 'FlightsClimbed', metricB: 'ActiveEnergyBurned',
+      labelEn: 'Flights Climbed vs Energy', labelZh: '爬楼层数 vs 活动能量',
+      align: () => alignSameDay(flights, energy),
+    },
+    {
+      metricA: 'RestingHeartRate', metricB: 'HeartRateVariabilitySDNN',
+      labelEn: 'RHR vs HRV', labelZh: '静息心率 vs HRV',
+      align: () => alignSameDay(rhr, hrv),
+    },
+    {
+      metricA: 'StepCount', metricB: 'WalkingSpeed',
+      labelEn: 'Steps vs Walking Speed', labelZh: '步数 vs 步行速度',
+      align: () => alignSameDay(steps, walkSpeed),
+    },
+    {
       metricA: 'SleepDuration', metricB: 'RestingHeartRate',
       labelEn: 'Sleep → Next-day RHR', labelZh: '睡眠 → 次日静息心率',
       align: () => alignNextDay(sleep, rhr),
-    },
-    {
-      metricA: 'SleepDuration', metricB: 'HeartRateVariabilitySDNN',
-      labelEn: 'Sleep → Next-day HRV', labelZh: '睡眠 → 次日 HRV',
-      align: () => alignNextDay(sleep, hrv),
-    },
-    {
-      metricA: 'StepCount', metricB: 'RestingHeartRate',
-      labelEn: 'Steps vs RHR', labelZh: '步数 vs 静息心率',
-      align: () => alignSameDay(steps, rhr),
     },
     {
       metricA: 'StepCount', metricB: 'SleepDuration',
@@ -135,14 +145,14 @@ export function calculateCorrelations(metricData: Record<string, MetricEntry[]>)
       align: () => alignSameDay(steps, sleep),
     },
     {
-      metricA: 'ActiveEnergyBurned', metricB: 'HeartRateVariabilitySDNN',
-      labelEn: 'Active Energy vs HRV', labelZh: '活动能量 vs HRV',
-      align: () => alignSameDay(energy, hrv),
+      metricA: 'StepCount', metricB: 'RestingHeartRate',
+      labelEn: 'Steps vs RHR', labelZh: '步数 vs 静息心率',
+      align: () => alignSameDay(steps, rhr),
     },
     {
-      metricA: 'WalkingSpeed', metricB: 'VO2Max',
-      labelEn: 'Walking Speed vs VO₂ Max (monthly)', labelZh: '步行速度 vs VO₂ Max（月均值）',
-      align: () => alignMonthly(walkSpeed, vo2max),
+      metricA: 'SleepDuration', metricB: 'HeartRateVariabilitySDNN',
+      labelEn: 'Sleep → Next-day HRV', labelZh: '睡眠 → 次日 HRV',
+      align: () => alignNextDay(sleep, hrv),
     },
   ];
 
