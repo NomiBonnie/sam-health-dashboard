@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry, SleepEntry, MetricEntry } from '../types';
-import { fetchJson, getMetricDisplayName } from '../utils';
+import { fetchJson, getMetricDisplayName, isDataFresh, DATA_EXPORT_DATE, formatDate } from '../utils';
 import { useLanguage } from '../LanguageContext';
 import {
   assessMetric, calculateHealthScore, getRiskLevel, getLevelColor, getLevelBg,
@@ -169,9 +169,22 @@ export default function AnalysisTab() {
     });
   }, []);
 
+  // Track which metrics are stale
+  const staleMetrics = useMemo(() => {
+    const stale: Record<string, string> = {}; // shortName -> lastDate
+    inventory.forEach(item => {
+      if (!isDataFresh(item.lastDate)) {
+        stale[item.shortName] = item.lastDate;
+      }
+    });
+    return stale;
+  }, [inventory]);
+
   const currentMetrics = useMemo(() => {
     const map: Record<string, number> = {};
     inventory.forEach(item => {
+      // Skip stale metrics — don't include them in analysis
+      if (!isDataFresh(item.lastDate)) return;
       const val = item.recent30dAvg ?? item.latestValue ?? 0;
       map[item.shortName] = val;
     });
@@ -195,15 +208,19 @@ export default function AnalysisTab() {
     ];
     return keys
       .map(k => {
+        // If metric is stale, return a stale marker instead
+        if (staleMetrics[k]) {
+          return { key: k, stale: true, lastDate: staleMetrics[k], assessment: null, percentile: null, trend: null };
+        }
         const assessment = assessMetric(k, currentMetrics[k], lang);
         if (!assessment) return null;
         const percentile = calculatePercentile(k, currentMetrics[k]);
         const trendData = metricData[k]?.map(d => ({ date: d.date, value: d.avg })) || [];
         const trend = detectTrend(trendData, trendPeriod, INVERTED_BETTER.has(k));
-        return { key: k, assessment, percentile, trend };
+        return { key: k, stale: false, lastDate: null, assessment, percentile, trend };
       })
-      .filter(Boolean) as { key: string; assessment: MetricAssessment; percentile: number | null; trend: TrendResult | null }[];
-  }, [currentMetrics, metricData, trendPeriod]);
+      .filter(Boolean) as ({ key: string; stale: boolean; lastDate: string | null; assessment: MetricAssessment | null; percentile: number | null; trend: TrendResult | null })[];
+  }, [currentMetrics, metricData, trendPeriod, staleMetrics]);
 
   const sleepStages = useMemo(() => analyzeSleepStages(sleep, lang), [sleep, lang]);
   const activityRings = useMemo(() => analyzeActivityRings(activity), [activity]);
@@ -217,16 +234,24 @@ export default function AnalysisTab() {
     ];
     return metricNames
       .map(name => {
+        // Skip metrics with stale data
+        if (staleMetrics[name]) return null;
         const data = metricData[name];
         if (!data || data.length === 0) return null;
         return compareYears(name, data, INVERTED_METRICS_SET.has(name));
       })
       .filter(Boolean) as YearComparison[];
-  }, [metricData]);
+  }, [metricData, staleMetrics]);
 
   const personalizedPlan = useMemo(() => {
     if (workouts.length === 0) return null;
-    return generatePersonalizedPlan(currentMetrics, workouts, lang);
+    // Only pass workouts from last 90 days relative to export date
+    const exportRef = new Date(DATA_EXPORT_DATE);
+    const cutoff = new Date(exportRef);
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const recentWorkouts = workouts.filter(w => w.date >= cutoffStr);
+    return generatePersonalizedPlan(currentMetrics, recentWorkouts, lang);
   }, [currentMetrics, workouts, lang]);
 
   const riskLevelText = (level: MetricAssessment['level']): string => {
@@ -259,7 +284,7 @@ export default function AnalysisTab() {
               {t('overallHealthScore') as string}
             </h2>
             <p className="text-sm font-light text-brand-600 dark:text-brand-400">
-              {t('ageAdjustedFor') as string} · {t('lastUpdated') as string}: {new Date().toLocaleDateString()}
+              {t('ageAdjustedFor') as string} · {t('lastUpdated') as string}: {DATA_EXPORT_DATE}
             </p>
           </div>
           <div className="text-right">
@@ -460,7 +485,26 @@ export default function AnalysisTab() {
           </div>
         </div>
         <div className="space-y-4">
-          {keyAssessments.map(({ key, assessment, percentile, trend }) => {
+          {keyAssessments.map(({ key, stale, lastDate, assessment, percentile, trend }) => {
+            // Stale metric card
+            if (stale) {
+              return (
+                <div key={key} className="card p-5 border bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 opacity-70">
+                  <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+                    <h4 className="text-base font-medium text-brand-900 dark:text-brand-100">
+                      {getMetricDisplayName(key)}
+                    </h4>
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-brand-200 dark:bg-brand-700 text-brand-500">
+                      {t('noRecentData') as string}
+                    </span>
+                  </div>
+                  <p className="text-sm font-light text-brand-500 mt-2">
+                    ⚠️ {t('lastMeasured') as string}: {lastDate}
+                  </p>
+                </div>
+              );
+            }
+            if (!assessment) return null;
             const detailed = getDetailedAnalysis(key, assessment.value, lang);
             const isExpanded = expandedMetric === key;
 

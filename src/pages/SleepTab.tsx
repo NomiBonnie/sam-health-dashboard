@@ -6,7 +6,7 @@ import {
 import MetricChart from '../components/MetricChart';
 import TimeRangeSelector from '../components/TimeRangeSelector';
 import { SleepEntry, TimeRange } from '../types';
-import { fetchJson, filterByTimeRange, sampleData } from '../utils';
+import { fetchJson, filterByTimeRange, sampleData, isDataFresh, DATA_EXPORT_DATE } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 
@@ -32,6 +32,9 @@ export default function SleepTab() {
 
   const sleepSummary = useMemo(() => {
     if (sleep.length === 0) return null;
+    // Check if we have recent sleep data (last entry within 90 days of export)
+    const lastSleepDate = sleep[sleep.length - 1]?.date;
+    if (lastSleepDate && !isDataFresh(lastSleepDate)) return null;
     const last30 = sleep.slice(-30);
     const avg = last30.reduce((s, d) => s + d.total_hours, 0) / last30.length;
     const meetsGoal = avg >= 7;

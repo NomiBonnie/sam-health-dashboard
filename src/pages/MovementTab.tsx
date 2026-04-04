@@ -5,7 +5,7 @@ import {
 import MetricChart from '../components/MetricChart';
 import TimeRangeSelector from '../components/TimeRangeSelector';
 import { ActivityEntry, InventoryItem, TimeRange } from '../types';
-import { fetchJson, filterByTimeRange, sampleData } from '../utils';
+import { fetchJson, filterByTimeRange, sampleData, isDataFresh } from '../utils';
 import { useTheme } from '../ThemeContext';
 import { useLanguage } from '../LanguageContext';
 import { assessMetric, type MetricAssessment } from '../healthAnalysis';
@@ -37,7 +37,8 @@ export default function MovementTab() {
     if (inventory.length === 0) return null;
     const getValue = (name: string) => {
       const item = inventory.find(i => i.shortName === name);
-      return item ? (item.recent30dAvg ?? item.latestValue ?? 0) : null;
+      if (!item || !isDataFresh(item.lastDate)) return null;
+      return item.recent30dAvg ?? item.latestValue ?? 0;
     };
     const steps = getValue('StepCount');
     const speed = getValue('WalkingSpeed');

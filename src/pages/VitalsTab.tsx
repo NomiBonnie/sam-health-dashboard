@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import MetricChart from '../components/MetricChart';
 import { useLanguage } from '../LanguageContext';
 import { InventoryItem } from '../types';
-import { fetchJson } from '../utils';
+import { fetchJson, isDataFresh, getMetricDisplayName } from '../utils';
 import { assessMetric, type MetricAssessment } from '../healthAnalysis';
 
 function StatusDot({ level }: { level: MetricAssessment['level'] }) {
@@ -30,12 +30,21 @@ export default function VitalsTab() {
       const item = inventory.find(i => i.shortName === name);
       return item ? (item.recent30dAvg ?? item.latestValue ?? 0) : null;
     };
+    const getLastDate = (name: string) => {
+      const item = inventory.find(i => i.shortName === name);
+      return item?.lastDate ?? null;
+    };
 
     const metrics = ['RestingHeartRate', 'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation', 'HeartRateRecoveryOneMinute', 'BodyMassIndex', 'BodyFatPercentage'] as const;
     const assessments: Record<string, MetricAssessment | null> = {};
+    const freshMap: Record<string, boolean> = {};
+    const lastDateMap: Record<string, string | null> = {};
     for (const m of metrics) {
       const val = getValue(m);
-      assessments[m] = val !== null && val > 0 ? assessMetric(m, val, lang) : null;
+      const ld = getLastDate(m);
+      freshMap[m] = ld ? isDataFresh(ld) : false;
+      lastDateMap[m] = ld;
+      assessments[m] = val !== null && val > 0 && freshMap[m] ? assessMetric(m, val, lang) : null;
     }
 
     // Heart health sentence
@@ -55,13 +64,20 @@ export default function VitalsTab() {
       }
     }
 
-    // Body composition sentence
+    // Body composition sentence — check freshness
     const bodyMetrics = ['BodyMassIndex', 'BodyFatPercentage'] as const;
+    const bodyFresh = bodyMetrics.some(m => freshMap[m]);
     const bodyLevels = bodyMetrics.map(m => assessments[m]?.level).filter(Boolean) as MetricAssessment['level'][];
     const bodyGood = bodyLevels.filter(l => l === 'optimal' || l === 'good').length;
 
     let bodySentence = '';
-    if (bodyLevels.length > 0) {
+    if (!bodyFresh) {
+      // All body composition data is stale
+      const bmiDate = lastDateMap['BodyMassIndex'] || lastDateMap['BodyFatPercentage'] || '';
+      bodySentence = lang === 'zh'
+        ? `⚠️ 身体成分数据最后测量日期：${bmiDate}，已过期，不反映当前状况。`
+        : `⚠️ Body composition last measured: ${bmiDate} — data is outdated and may not reflect current status.`;
+    } else if (bodyLevels.length > 0) {
       if (bodyGood === bodyLevels.length) {
         bodySentence = lang === 'zh' ? '身体成分在健康范围内。' : 'Body composition is within healthy range.';
       } else {
@@ -69,7 +85,7 @@ export default function VitalsTab() {
       }
     }
 
-    return { assessments, heartSentence, bodySentence, metrics };
+    return { assessments, heartSentence, bodySentence, metrics, freshMap, lastDateMap };
   }, [inventory, lang]);
 
   return (
@@ -89,6 +105,15 @@ export default function VitalsTab() {
           <div className="flex flex-wrap gap-3 mt-3">
             {summary.metrics.map(m => {
               const a = summary.assessments[m];
+              const fresh = summary.freshMap[m];
+              if (!fresh) {
+                return (
+                  <span key={m} className="inline-flex items-center gap-1.5 text-xs text-brand-400">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-300" />
+                    {getMetricDisplayName(m)} — {t('noRecentData') as string}
+                  </span>
+                );
+              }
               if (!a) return null;
               return (
                 <span key={m} className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">

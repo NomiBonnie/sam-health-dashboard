@@ -134,6 +134,10 @@ export const translations = {
     yearComparison: 'Year Comparison',
     vsLastYear: 'vs last year',
     noData: 'Insufficient data',
+    noRecentData: 'No recent data',
+    lastMeasured: 'Last measured',
+    dataStale: 'Data outdated',
+    staleBodyComp: 'Body composition data is over {years} years old and may not reflect current status.',
 
     // Personalized Plan
     personalizedPlan: 'Personalized Exercise Plan',
@@ -281,6 +285,10 @@ export const translations = {
     yearComparison: '年度对比',
     vsLastYear: '较去年',
     noData: '数据不足',
+    noRecentData: '暂无近期数据',
+    lastMeasured: '最近测量',
+    dataStale: '数据已过期',
+    staleBodyComp: '身体成分数据已超过 {years} 年，可能不反映当前状况。',
 
     // Personalized Plan
     personalizedPlan: '个性化运动方案',

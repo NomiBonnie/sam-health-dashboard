@@ -366,9 +366,10 @@ export function generatePersonalizedPlan(
   workouts: { date: string; type: string; duration_min: number }[],
   lang: 'en' | 'zh'
 ): PersonalizedPlan {
-  // Analyze last 90 days
-  const now = new Date();
-  const cutoff = new Date();
+  // Analyze last 90 days relative to data export date
+  const DATA_REF = '2026-03-17';
+  const now = new Date(DATA_REF);
+  const cutoff = new Date(DATA_REF);
   cutoff.setDate(now.getDate() - 90);
 
   const recent = workouts.filter(w => new Date(w.date) >= cutoff);
@@ -654,7 +655,7 @@ export function detectTrend(
   invertedBetter = false
 ): TrendResult | null {
   const days = period === '30d' ? 30 : period === '90d' ? 90 : 365;
-  const cutoff = new Date();
+  const cutoff = new Date('2026-03-17');
   cutoff.setDate(cutoff.getDate() - days);
   
   const filtered = data.filter(d => new Date(d.date) >= cutoff && d.value > 0);

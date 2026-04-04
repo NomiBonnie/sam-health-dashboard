@@ -1,5 +1,24 @@
 import { MetricEntry, TimeRange } from './types';
 
+// Data export reference date — used instead of Date.now() since data is static until next export
+export const DATA_EXPORT_DATE = '2026-03-17';
+
+/**
+ * Check if a metric's lastDate is recent enough to be considered fresh.
+ * Uses the data export date as reference, not current time.
+ */
+export function isDataFresh(lastDate: string, maxDaysOld: number = 90): boolean {
+  const last = new Date(lastDate);
+  const ref = new Date(DATA_EXPORT_DATE);
+  const diffDays = (ref.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= maxDaysOld;
+}
+
+/** Format a date string for display, e.g. "2021-03-10" */
+export function formatDate(dateStr: string): string {
+  return dateStr.slice(0, 10);
+}
+
 export async function fetchJson<T>(path: string): Promise<T> {
   const base = import.meta.env.BASE_URL || '/';
   const url = path.startsWith('/') ? `${base.replace(/\/$/, '')}${path}` : path;
@@ -10,7 +29,7 @@ export async function fetchJson<T>(path: string): Promise<T> {
 
 export function filterByTimeRange<T extends { date: string }>(data: T[], range: TimeRange): T[] {
   if (range === 'all') return data;
-  const now = new Date();
+  const now = new Date(DATA_EXPORT_DATE);
   const months: Record<string, number> = { '1m': 1, '3m': 3, '1y': 12, '3y': 36 };
   const cutoff = new Date(now);
   cutoff.setMonth(cutoff.getMonth() - months[range]);
