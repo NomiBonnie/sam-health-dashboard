@@ -146,6 +146,14 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
 };
 
+// Metrics where lower values are better (below optimal lower bound = still optimal)
+const INVERTED_STANDARD_METRICS = new Set(['RestingHeartRate']);
+// Metrics where exceeding the optimal upper bound is still optimal (higher = better)
+const HIGHER_IS_BETTER = new Set([
+  'HeartRateVariabilitySDNN', 'VO2Max', 'OxygenSaturation', 'StepCount',
+  'WalkingSpeed', 'AppleWalkingSteadiness', 'HeartRateRecoveryOneMinute',
+]);
+
 export function assessMetric(metricName: string, value: number, lang: 'en' | 'zh' = 'en'): MetricAssessment | null {
   const standard = STANDARDS[metricName];
   if (!standard) return null;
@@ -154,7 +162,12 @@ export function assessMetric(metricName: string, value: number, lang: 'en' | 'zh
   let interpretation = '';
   let recommendation = '';
 
-  if (value >= standard.optimal[0] && value <= standard.optimal[1]) {
+  // Handle overflow: values beyond optimal range in the "better" direction
+  const isOptimalOverflow =
+    (HIGHER_IS_BETTER.has(metricName) && value > standard.optimal[1]) ||
+    (INVERTED_STANDARD_METRICS.has(metricName) && value < standard.optimal[0] && value > 0);
+
+  if (isOptimalOverflow || (value >= standard.optimal[0] && value <= standard.optimal[1])) {
     level = 'optimal';
     interpretation = lang === 'zh'
       ? `优秀。您的${standard.metric}处于 43 岁男性的最佳范围。`
@@ -938,8 +951,8 @@ export function getDetailedAnalysis(
     }
   } else if (metricName === 'HeartRateVariabilitySDNN') {
     significance = lang === 'zh'
-      ? 'HRV SDNN 测量 24 小时内心跳间隔变异性。低 HRV（<30ms）预示心脏事件，与慢性压力、过度训练和睡眠质量差有关。较高的 HRV 表明副交感神经张力更好。'
-      : 'HRV SDNN measures beat-to-beat heart rate variability over 24h. Low HRV (<30ms) predicts cardiac events and is linked to chronic stress, overtraining, and poor sleep quality. Higher HRV indicates better parasympathetic tone.';
+      ? 'HRV SDNN 反映心跳间隔变异性，由 Apple Watch 在夜间短时段采样测量。较低的 HRV 与慢性压力、过度训练和睡眠质量差有关，较高的 HRV 表明副交感神经张力更好。注意：Apple Watch 短时段 SDNN 通常低于临床 24 小时 Holter 监测值，二者不可直接比较。'
+      : 'HRV SDNN reflects beat-to-beat heart rate variability, measured by Apple Watch during short overnight sampling periods. Lower HRV is linked to chronic stress, overtraining, and poor sleep. Higher HRV indicates better parasympathetic tone. Note: Apple Watch short-duration SDNN is typically lower than clinical 24h Holter values and should not be directly compared.';
 
     if (lang === 'zh') {
       implications = value < 20 ? '心脏事件风险升高，建议咨询心脏科医生' : value < 30 ? '检测到自主神经失衡' : '自主神经功能健康';
@@ -958,8 +971,8 @@ export function getDetailedAnalysis(
     }
   } else if (metricName === 'VO2Max') {
     significance = lang === 'zh'
-      ? '最大摄氧量是心肺健康的黄金标准。每增加 1 mL/kg/min，全因死亡率降低约 15%（Cooper Clinic）。优秀的最大摄氧量（40-49 岁男性 >42）预示长寿。'
-      : 'VO₂ Max is the gold standard for cardiorespiratory fitness. Each 1 mL/kg/min increase reduces all-cause mortality by ~15% (Cooper Clinic). Superior VO₂ Max (>42 for 40-49y males) predicts longevity.';
+      ? '最大摄氧量是心肺健康的黄金标准。从「非常差」提升到「差」等级（约增加 3-5 mL/kg/min），全因死亡率可降低约 50%（Cooper Clinic）。优秀的最大摄氧量（40-49 岁男性 >42）预示长寿。注意：Apple Watch 通过步行/跑步估算 VO₂ Max，在 BMI 较高时精度可能降低。'
+      : 'VO₂ Max is the gold standard for cardiorespiratory fitness. Improving from "Very Poor" to "Poor" (roughly +3-5 mL/kg/min) reduces all-cause mortality by ~50% (Cooper Clinic). Superior VO₂ Max (>42 for 40-49y males) predicts longevity. Note: Apple Watch estimates VO₂ Max from walking/running data; accuracy may decrease at higher BMI.';
 
     if (lang === 'zh') {
       implications = value < 30 ? '心肺健康差，死亡风险比健康同龄人高 2 倍' : value < 35 ? '低于平均水平' : '良好至优秀';
@@ -1054,15 +1067,19 @@ export function getDetailedAnalysis(
       : 'Sleep duration affects metabolism, immunity, and cardiovascular health. Ideal for adults: 7-8h. <6h is linked to obesity, diabetes, and higher all-cause mortality (NSF 2024).';
 
     if (lang === 'zh') {
-      implications = value < 6 ? '严重睡眠不足，多系统健康风险' : value < 6.5 ? '睡眠不足' : '健康睡眠时长';
+      implications = value < 6 ? '严重睡眠不足，多系统健康风险' : value < 6.5 ? '睡眠不足' : value < 7 ? '基本达标但仍低于推荐的 7 小时' : '健康睡眠时长';
     } else {
-      implications = value < 6 ? 'Severe sleep deprivation. Multi-system health risk.' : value < 6.5 ? 'Insufficient sleep' : 'Healthy sleep duration';
+      implications = value < 6 ? 'Severe sleep deprivation. Multi-system health risk.' : value < 6.5 ? 'Insufficient sleep' : value < 7 ? 'Borderline adequate but below the recommended 7 hours' : 'Healthy sleep duration';
     }
 
     if (value < 6.5) {
       intervention = lang === 'zh'
         ? '第 1-2 周：提前 30 分钟上床，关闭屏幕。第 3-4 周：固定作息时间（包括周末）。睡前 2 小时避免咖啡因和酒精。'
         : 'Week 1-2: Go to bed 30min earlier, screens off. Week 3-4: Fixed sleep schedule (incl. weekends). Avoid caffeine/alcohol 2h before bed.';
+    } else if (value < 7) {
+      intervention = lang === 'zh'
+        ? '尝试每晚提前 15-20 分钟上床，目标达到 7 小时。保持固定睡眠时间，睡前避免屏幕。'
+        : 'Try going to bed 15-20min earlier each night, targeting 7 hours. Maintain consistent sleep schedule and avoid screens before bed.';
     } else {
       intervention = lang === 'zh' ? '保持睡眠习惯。' : 'Maintain sleep habits.';
     }
