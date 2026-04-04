@@ -181,12 +181,10 @@ export default function AnalysisTab() {
     return stale;
   }, [inventory]);
 
-  const currentMetrics = useMemo(() => {
+  // Helper: compute metrics for a given number of days
+  const computeMetricsForPeriod = (days: number) => {
     const map: Record<string, number> = {};
-    // Calculate cutoff date based on trendPeriod
     const exportDate = new Date(DATA_EXPORT_DATE);
-    const periodDays: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365 };
-    const days = periodDays[trendPeriod] || 90;
     const cutoff = new Date(exportDate);
     cutoff.setDate(cutoff.getDate() - days);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
@@ -228,9 +226,20 @@ export default function AnalysisTab() {
       map.SleepDuration = avgSleep;
     }
     return map;
-  }, [inventory, sleep, metricData, trendPeriod]);
+  };
 
-  const healthScore = useMemo(() => calculateHealthScore(currentMetrics, lang), [currentMetrics, lang]);
+  // baseMetrics: always 30d — used for health score, strengths/concerns, year-over-year, exercise plan
+  const baseMetrics = useMemo(() => computeMetricsForPeriod(30), [inventory, sleep, metricData]);
+
+  // currentMetrics: follows trendPeriod — used for detailed metric cards
+  const periodDays: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365 };
+  const currentMetrics = useMemo(
+    () => computeMetricsForPeriod(periodDays[trendPeriod] || 90),
+    [inventory, sleep, metricData, trendPeriod]
+  );
+
+  // Health score always based on 30d baseline (stable, not affected by period selector)
+  const healthScore = useMemo(() => calculateHealthScore(baseMetrics, lang), [baseMetrics, lang]);
 
   const INVERTED_BETTER = new Set(['RestingHeartRate', 'BodyMassIndex', 'BodyFatPercentage']);
 
@@ -296,8 +305,8 @@ export default function AnalysisTab() {
     cutoff.setDate(cutoff.getDate() - 90);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
     const recentWorkouts = workouts.filter(w => w.date >= cutoffStr);
-    return generatePersonalizedPlan(currentMetrics, recentWorkouts, lang);
-  }, [currentMetrics, workouts, lang]);
+    return generatePersonalizedPlan(baseMetrics, recentWorkouts, lang);
+  }, [baseMetrics, workouts, lang]);
 
   const riskLevelText = (level: MetricAssessment['level']): string => {
     const map: Record<string, string> = {
