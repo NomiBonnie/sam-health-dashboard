@@ -57,12 +57,15 @@ const STANDARDS: Record<string, HealthStandard> = {
   VO2Max: {
     metric: 'VO₂ Max',
     unit: 'mL/kg/min',
-    optimal: [42, 56], // Superior for 40-49
-    good: [35, 42],    // Excellent
-    normal: [31, 35],  // Good
-    concern: [26, 31], // Fair
-    warning: [0, 26],  // Poor
-    source: 'Cooper Clinic (age 40-49)',
+    // Cooper Institute 40-49 male, adjusted -6 ml/kg/min for Apple Watch estimation bias
+    // (PLOS ONE 2025: Apple Watch underestimates by ~6 ml/kg/min vs indirect calorimetry)
+    // Cooper original: Superior 52.5, Excellent 46.4, Good 42.4, Fair 38.5
+    optimal: [40, 50], // Superior/Excellent (lab ~46-56)
+    good: [36, 40],    // Good (lab ~42-46)
+    normal: [32, 36],  // Fair (lab ~38-42)
+    concern: [28, 32], // Below Fair (lab ~34-38)
+    warning: [0, 28],  // Poor (lab <34)
+    source: 'Cooper Institute (40-49), Apple Watch adjusted (-6)',
   },
   OxygenSaturation: {
     metric: 'Blood Oxygen',
@@ -208,7 +211,7 @@ function generateRecommendation(metric: string, value: number, std: HealthStanda
       if (value < 30) return 'Increase recovery time, reduce stress, improve sleep quality.';
       break;
     case 'VO2Max':
-      if (value < 35) return 'Add high-intensity interval training (HIIT) 2x/week. Gradual progression recommended.';
+      if (value < 36) return 'Add high-intensity interval training (HIIT) 2x/week. Gradual progression recommended.';
       break;
     case 'BodyMassIndex':
       if (value > 27) return 'Gradual weight loss target: 0.5-1kg/week. Combine diet + exercise.';
@@ -468,7 +471,7 @@ export function generatePersonalizedPlan(
     }
   }
 
-  if (vo2 && vo2 < 35) {
+  if (vo2 && vo2 < 36) {
     if (hasSwimming) {
       recommendations.push({
         priority: 'high',
@@ -613,7 +616,7 @@ interface PercentileRange {
 const PERCENTILE_TABLES: Record<string, PercentileRange> = {
   RestingHeartRate:         { p5: 48, p10: 52, p25: 58, p50: 66, p75: 74, p90: 80, p95: 86 },
   HeartRateVariabilitySDNN: { p5: 12, p10: 18, p25: 26, p50: 36, p75: 50, p90: 68, p95: 82 },
-  VO2Max:                   { p5: 24, p10: 30, p25: 34, p50: 36, p75: 39, p90: 44, p95: 48 },
+  VO2Max:                   { p5: 24, p10: 26, p25: 29, p50: 33, p75: 38, p90: 42, p95: 47 },
   OxygenSaturation:         { p5: 94, p10: 95, p25: 96, p50: 97, p75: 98, p90: 99, p95: 99.5 },
   BodyMassIndex:            { p5: 20, p10: 21.5, p25: 24, p50: 27, p75: 30, p90: 33, p95: 36 },
   BodyFatPercentage:        { p5: 11, p10: 14, p25: 18, p50: 23, p75: 27, p90: 31, p95: 34 },
@@ -931,13 +934,13 @@ export function getDetailedAnalysis(
 
   if (metricName === 'RestingHeartRate') {
     significance = lang === 'zh'
-      ? '静息心率反映心血管健康和自主神经平衡。高于 60 bpm 的每 10 次/分钟增加与全因死亡率增加约 17% 相关（Framingham 心脏研究）。较低的静息心率表明心脏效率更高。'
-      : 'Resting heart rate (RHR) reflects cardiovascular fitness and autonomic balance. Each 10 bpm increase above 60 bpm is associated with ~17% higher all-cause mortality risk (Framingham Heart Study). Lower RHR indicates better cardiac efficiency.';
+      ? '静息心率反映心血管健康和自主神经平衡。高于 60 bpm 的每 10 次/分钟增加与全因死亡率增加约 16% 相关（Framingham 心脏研究）。较低的静息心率表明心脏效率更高。'
+      : 'Resting heart rate (RHR) reflects cardiovascular fitness and autonomic balance. Each 10 bpm increase above 60 bpm is associated with ~16% higher all-cause mortality risk (Framingham Heart Study). Lower RHR indicates better cardiac efficiency.';
 
     if (lang === 'zh') {
-      implications = value > 80 ? '心血管疾病风险比最佳范围高 2.3 倍（AHA 2024）' : value > 70 ? '中等心血管负荷' : '处于健康范围';
+      implications = value > 80 ? '静息心率偏高，心血管疾病和心力衰竭风险升高（AHA 2024）' : value > 70 ? '中等心血管负荷' : '处于健康范围';
     } else {
-      implications = value > 80 ? '2.3x higher CVD risk vs optimal range (AHA 2024)' : value > 70 ? 'Moderate cardiovascular load' : 'Within healthy range';
+      implications = value > 80 ? 'Elevated RHR associated with higher risk of CVD and heart failure (AHA 2024)' : value > 70 ? 'Moderate cardiovascular load' : 'Within healthy range';
     }
 
     if (value > 75) {
@@ -971,16 +974,16 @@ export function getDetailedAnalysis(
     }
   } else if (metricName === 'VO2Max') {
     significance = lang === 'zh'
-      ? '最大摄氧量是心肺健康的黄金标准。从「非常差」提升到「差」等级（约增加 3-5 mL/kg/min），全因死亡率可降低约 50%（Cooper Clinic）。优秀的最大摄氧量（40-49 岁男性 >42）预示长寿。注意：Apple Watch 通过步行/跑步估算 VO₂ Max，在 BMI 较高时精度可能降低。'
-      : 'VO₂ Max is the gold standard for cardiorespiratory fitness. Improving from "Very Poor" to "Poor" (roughly +3-5 mL/kg/min) reduces all-cause mortality by ~50% (Cooper Clinic). Superior VO₂ Max (>42 for 40-49y males) predicts longevity. Note: Apple Watch estimates VO₂ Max from walking/running data; accuracy may decrease at higher BMI.';
+      ? '最大摄氧量是心肺健康的黄金标准。从「非常差」提升到「差」等级（约增加 3-5 mL/kg/min），全因死亡率可降低约 50%（Cooper Clinic）。注意：Apple Watch 估算值通常比实验室测量低约 6 mL/kg/min（PLOS ONE 2025），本报告的标准已针对这一偏差进行了校准。'
+      : 'VO₂ Max is the gold standard for cardiorespiratory fitness. Improving from "Very Poor" to "Poor" (~3-5 mL/kg/min) reduces all-cause mortality by ~50% (Cooper Clinic). Note: Apple Watch estimates are typically ~6 mL/kg/min lower than lab measurements (PLOS ONE 2025). Our standards are calibrated for this bias.';
 
     if (lang === 'zh') {
-      implications = value < 30 ? '心肺健康差，死亡风险比健康同龄人高 2 倍' : value < 35 ? '低于平均水平' : '良好至优秀';
+      implications = value < 28 ? '心肺健康差，全因死亡风险比健康同龄人高约 70%（ACC 2018）' : value < 32 ? '低于平均水平，有明显改善空间' : '良好至优秀';
     } else {
-      implications = value < 30 ? 'Poor cardiorespiratory fitness, 2x mortality risk vs fit peers' : value < 35 ? 'Below average fitness' : 'Good to excellent fitness';
+      implications = value < 28 ? 'Poor cardiorespiratory fitness. ~70% higher all-cause mortality vs fit peers (ACC 2018)' : value < 32 ? 'Below average. Significant room for improvement.' : 'Good to excellent fitness';
     }
 
-    if (value < 35) {
+    if (value < 36) {
       intervention = lang === 'zh'
         ? '第 1-2 周：每周 2 次，每次 30 分钟二区有氧（最大心率 60-70%）。第 3-4 周：增加 1 次最大摄氧量间歇（4 分钟 @ 最大心率 90% / 3 分钟休息 × 4）。8 周后重测。'
         : 'Week 1-2: 2x 30min zone 2 cardio (60-70% max HR). Week 3-4: Add 1x VO₂ Max interval (4min @ 90% max HR / 3min rest × 4). Retest in 8 weeks.';
@@ -1045,8 +1048,8 @@ export function getDetailedAnalysis(
     }
   } else if (metricName === 'StepCount') {
     significance = lang === 'zh'
-      ? '每日步数是日常活动量的简单指标。>10,000 步/天与全因死亡率降低 50% 相关（JAMA 2020）。每增加 1,000 步降低死亡率约 6%。'
-      : 'Daily steps are a simple measure of physical activity. >10,000 steps/day is associated with 50% lower all-cause mortality (JAMA 2020). Each 1,000-step increase reduces mortality ~6%.';
+      ? '每日步数是日常活动量的简单指标。每天 8,000 步与全因死亡率降低 51% 相关，12,000 步降低 65%（JAMA 2020 / CDC）。强度（快走 vs 慢走）对死亡率无额外影响，步数本身是关键。'
+      : 'Daily steps are a simple measure of physical activity. 8,000 steps/day is associated with 51% lower all-cause mortality, 12,000 steps with 65% lower (JAMA 2020 / CDC). Step intensity (brisk vs slow) showed no additional mortality benefit — total steps matter most.';
 
     if (lang === 'zh') {
       implications = value < 5000 ? '久坐生活方式，心血管风险高' : value < 7500 ? '低于推荐水平' : '达到健康目标';
