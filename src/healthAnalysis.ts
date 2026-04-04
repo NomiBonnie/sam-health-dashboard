@@ -3,7 +3,9 @@
 
 export interface HealthStandard {
   metric: string;
+  metricZh?: string;
   unit: string;
+  unitZh?: string;
   optimal: [number, number];
   good: [number, number];
   normal: [number, number];
@@ -21,6 +23,12 @@ export interface MetricAssessment {
   recommendation?: string;
 }
 
+export interface CategoryDetail {
+  score: number;
+  metrics: { name: string; value: number; unit: string; level: string; source: string }[];
+  summary: string;
+}
+
 export interface HealthScore {
   overall: number;
   cardiovascular: number;
@@ -30,12 +38,19 @@ export interface HealthScore {
   interpretation: string;
   topConcerns: string[];
   strengths: string[];
+  categoryDetails: {
+    cardiovascular: CategoryDetail;
+    fitness: CategoryDetail;
+    sleep: CategoryDetail;
+    activity: CategoryDetail;
+  };
 }
 
 // Age: 43, Male, BMI: 27.7 (overweight)
 const STANDARDS: Record<string, HealthStandard> = {
   RestingHeartRate: {
     metric: 'Resting Heart Rate',
+    metricZh: '静息心率',
     unit: 'bpm',
     optimal: [50, 60],
     good: [60, 70],
@@ -46,6 +61,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   HeartRateVariabilitySDNN: {
     metric: 'HRV (SDNN)',
+    metricZh: '心率变异性',
     unit: 'ms',
     optimal: [50, 100],
     good: [30, 50],
@@ -56,6 +72,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   VO2Max: {
     metric: 'VO₂ Max',
+    metricZh: '最大摄氧量',
     unit: 'mL/kg/min',
     // Cooper Institute 40-49 male, adjusted -6 ml/kg/min for Apple Watch estimation bias
     // (PLOS ONE 2025: Apple Watch underestimates by ~6 ml/kg/min vs indirect calorimetry)
@@ -69,6 +86,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   OxygenSaturation: {
     metric: 'Blood Oxygen',
+    metricZh: '血氧饱和度',
     unit: '%',
     optimal: [97, 100],
     good: [95, 97],
@@ -79,6 +97,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   BodyMassIndex: {
     metric: 'BMI',
+    metricZh: '体质指数',
     unit: '',
     optimal: [18.5, 24.9],
     good: [25, 27],
@@ -89,6 +108,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   BodyFatPercentage: {
     metric: 'Body Fat %',
+    metricZh: '体脂率',
     unit: '%',
     optimal: [10, 18],
     good: [18, 22],
@@ -99,7 +119,9 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   StepCount: {
     metric: 'Daily Steps',
+    metricZh: '每日步数',
     unit: 'steps',
+    unitZh: '步',
     optimal: [10000, 15000],
     good: [7500, 10000],
     normal: [5000, 7500],
@@ -109,7 +131,9 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   SleepDuration: {
     metric: 'Sleep Duration',
+    metricZh: '睡眠时长',
     unit: 'hours',
+    unitZh: '小时',
     optimal: [7.5, 9],
     good: [7, 7.5],
     normal: [6.5, 7],
@@ -119,6 +143,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   WalkingSpeed: {
     metric: 'Walking Speed',
+    metricZh: '步行速度',
     unit: 'km/h',
     optimal: [5.5, 7],
     good: [4.8, 5.5],
@@ -129,6 +154,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   AppleWalkingSteadiness: {
     metric: 'Walking Steadiness',
+    metricZh: '步行稳定性',
     unit: '%',
     optimal: [95, 100],
     good: [90, 95],
@@ -139,6 +165,7 @@ const STANDARDS: Record<string, HealthStandard> = {
   },
   HeartRateRecoveryOneMinute: {
     metric: 'Heart Rate Recovery (1min)',
+    metricZh: '心率恢复(1分钟)',
     unit: 'bpm',
     optimal: [25, 60],
     good: [20, 25],
@@ -249,11 +276,52 @@ export function calculateHealthScore(metrics: Record<string, number>, lang: 'en'
   const fitnessMetrics = ['StepCount', 'WalkingSpeed', 'AppleWalkingSteadiness'];
   const bodyMetrics = ['BodyMassIndex', 'BodyFatPercentage'];
 
-  const cardiovascular = calcCategoryScore(metrics, cardioMetrics);
-  const fitness = calcCategoryScore(metrics, fitnessMetrics);
-  const activity = metrics.StepCount ? (metrics.StepCount >= 10000 ? 100 : Math.round((metrics.StepCount / 10000) * 100)) : 0;
-  const sleepAssessment = metrics.SleepDuration ? assessMetric('SleepDuration', metrics.SleepDuration)?.level : null;
+  const cardiovascularDetail = calcCategoryScore(metrics, cardioMetrics, lang);
+  const cardiovascular = cardiovascularDetail.score;
+  const fitnessDetail = calcCategoryScore(metrics, fitnessMetrics, lang);
+  const fitness = fitnessDetail.score;
+
+  // Activity: based on steps vs 10,000 goal
+  const activityScore = metrics.StepCount ? (metrics.StepCount >= 10000 ? 100 : Math.round((metrics.StepCount / 10000) * 100)) : 0;
+  const activity = activityScore;
+  const stepsStd = STANDARDS.StepCount;
+  const stepsAssess = metrics.StepCount ? assessMetric('StepCount', metrics.StepCount, lang) : null;
+  const activityDetail: CategoryDetail = {
+    score: activityScore,
+    metrics: metrics.StepCount && stepsAssess ? [{
+      name: lang === 'zh' && stepsStd?.metricZh ? stepsStd.metricZh : (stepsStd?.metric || 'Daily Steps'),
+      value: Math.round(metrics.StepCount),
+      unit: (lang === 'zh' && stepsStd?.unitZh) ? stepsStd.unitZh : (stepsStd?.unit || 'steps'),
+      level: lang === 'zh'
+        ? ({ optimal: '优秀', good: '良好', normal: '正常', concern: '需关注', warning: '警告' }[stepsAssess.level])
+        : ({ optimal: 'Optimal', good: 'Good', normal: 'Normal', concern: 'Needs Attention', warning: 'Warning' }[stepsAssess.level]),
+      source: stepsStd?.source || 'CDC 2024',
+    }] : [],
+    summary: lang === 'zh'
+      ? `基于每日步数与 10,000 步目标的比例计算。`
+      : `Based on daily steps as a percentage of the 10,000-step goal.`,
+  };
+
+  // Sleep
+  const sleepAssessment = metrics.SleepDuration ? assessMetric('SleepDuration', metrics.SleepDuration, lang)?.level : null;
   const sleep = sleepAssessment ? scoreMap[sleepAssessment] : 0;
+  const sleepStd = STANDARDS.SleepDuration;
+  const sleepAssess = metrics.SleepDuration ? assessMetric('SleepDuration', metrics.SleepDuration, lang) : null;
+  const sleepDetail: CategoryDetail = {
+    score: sleep,
+    metrics: metrics.SleepDuration && sleepAssess ? [{
+      name: lang === 'zh' && sleepStd?.metricZh ? sleepStd.metricZh : (sleepStd?.metric || 'Sleep Duration'),
+      value: Math.round(metrics.SleepDuration * 10) / 10,
+      unit: (lang === 'zh' && sleepStd?.unitZh) ? sleepStd.unitZh : (sleepStd?.unit || 'hours'),
+      level: lang === 'zh'
+        ? ({ optimal: '优秀', good: '良好', normal: '正常', concern: '需关注', warning: '警告' }[sleepAssess.level])
+        : ({ optimal: 'Optimal', good: 'Good', normal: 'Normal', concern: 'Needs Attention', warning: 'Warning' }[sleepAssess.level]),
+      source: sleepStd?.source || 'NSF adult (40-49)',
+    }] : [],
+    summary: lang === 'zh'
+      ? `基于美国睡眠基金会 40-49 岁成人建议的 7-9 小时标准。`
+      : `Based on NSF recommended 7-9 hours for adults aged 40-49.`,
+  };
 
   const topConcerns: string[] = [];
   const strengths: string[] = [];
@@ -289,15 +357,47 @@ export function calculateHealthScore(metrics: Record<string, number>, lang: 'en'
     interpretation,
     topConcerns,
     strengths,
+    categoryDetails: {
+      cardiovascular: cardiovascularDetail,
+      fitness: fitnessDetail,
+      sleep: sleepDetail,
+      activity: activityDetail,
+    },
   };
 }
 
-function calcCategoryScore(metrics: Record<string, number>, keys: string[]): number {
-  const scores = keys
-    .map(k => metrics[k] ? assessMetric(k, metrics[k]) : null)
-    .filter(Boolean)
-    .map(a => ({ optimal: 100, good: 80, normal: 60, concern: 40, warning: 20 }[a!.level]));
-  return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+function calcCategoryScore(metrics: Record<string, number>, keys: string[], lang: 'en' | 'zh' = 'en'): CategoryDetail {
+  const scoreMap = { optimal: 100, good: 80, normal: 60, concern: 40, warning: 20 };
+  const levelLabels: Record<string, Record<string, string>> = {
+    en: { optimal: 'Optimal', good: 'Good', normal: 'Normal', concern: 'Needs Attention', warning: 'Warning' },
+    zh: { optimal: '优秀', good: '良好', normal: '正常', concern: '需关注', warning: '警告' },
+  };
+  const metricDetails: CategoryDetail['metrics'] = [];
+  const scores: number[] = [];
+
+  keys.forEach(k => {
+    const val = metrics[k];
+    if (!val) return;
+    const assessment = assessMetric(k, val, lang);
+    if (!assessment) return;
+    const std = STANDARDS[k];
+    scores.push(scoreMap[assessment.level]);
+    metricDetails.push({
+      name: lang === 'zh' && std?.metricZh ? std.metricZh : (std?.metric || k),
+      value: Math.round(val * 10) / 10,
+      unit: (lang === 'zh' && std?.unitZh) ? std.unitZh : (std?.unit || ''),
+      level: levelLabels[lang]?.[assessment.level] || assessment.level,
+      source: std?.source || '',
+    });
+  });
+
+  const score = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  const goodCount = scores.filter(s => s >= 80).length;
+  const summary = lang === 'zh'
+    ? `${metricDetails.length} 项指标中 ${goodCount} 项达标（良好或以上）。`
+    : `${goodCount} of ${metricDetails.length} metrics rated Good or better.`;
+
+  return { score, metrics: metricDetails, summary };
 }
 
 // ============================================================

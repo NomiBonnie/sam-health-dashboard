@@ -328,10 +328,10 @@ export default function AnalysisTab() {
   };
 
   const categoryScores = [
-    { label: t('categoryCardiovascular') as string, score: healthScore.cardiovascular, icon: '❤️' },
-    { label: t('categoryFitness') as string, score: healthScore.fitness, icon: '🏃' },
-    { label: t('categorySleep') as string, score: healthScore.sleep, icon: '😴' },
-    { label: t('categoryActivity') as string, score: healthScore.activity, icon: '📊' },
+    { label: t('categoryCardiovascular') as string, score: healthScore.cardiovascular, icon: '❤️', key: 'cardiovascular' as const },
+    { label: t('categoryFitness') as string, score: healthScore.fitness, icon: '🏃', key: 'fitness' as const },
+    { label: t('categorySleep') as string, score: healthScore.sleep, icon: '😴', key: 'sleep' as const },
+    { label: t('categoryActivity') as string, score: healthScore.activity, icon: '📊', key: 'activity' as const },
   ];
 
   const scoreLabel = healthScore.overall >= 80 ? t('excellent') as string : healthScore.overall >= 60 ? t('good') as string : t('needsImprovement') as string;
@@ -363,15 +363,45 @@ export default function AnalysisTab() {
           {healthScore.interpretation}
         </p>
 
-        {/* Category Scores */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {categoryScores.map(cat => (
-            <div key={cat.label} className="text-center p-4 border border-brand-200 dark:border-brand-800 rounded-lg">
-              <div className="text-2xl mb-1">{cat.icon}</div>
-              <div className="text-2xl font-light text-brand-900 dark:text-brand-100 mb-1">{cat.score}</div>
-              <div className="text-xs text-brand-500 uppercase tracking-luxury">{cat.label}</div>
-            </div>
-          ))}
+        {/* Category Scores with Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {categoryScores.map(cat => {
+            const detail = healthScore.categoryDetails[cat.key];
+            const scoreColor = cat.score >= 80 ? 'text-green-600 dark:text-green-400' : cat.score >= 60 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400';
+            return (
+              <div key={cat.label} className="p-4 border border-brand-200 dark:border-brand-800 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{cat.icon}</span>
+                    <span className="text-sm font-medium text-brand-900 dark:text-brand-100">{cat.label}</span>
+                  </div>
+                  <span className={`text-2xl font-light ${scoreColor}`}>{cat.score}</span>
+                </div>
+                {detail.metrics.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {detail.metrics.map(m => (
+                      <div key={m.name} className="flex items-center justify-between text-xs">
+                        <span className="text-brand-600 dark:text-brand-400">{m.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-brand-900 dark:text-brand-100">{m.value.toLocaleString()} {m.unit}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            m.level === 'Optimal' || m.level === '优秀' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                            m.level === 'Good' || m.level === '良好' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                            m.level === 'Normal' || m.level === '正常' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                            'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                          }`}>{m.level}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-brand-400 dark:text-brand-500 leading-relaxed">
+                  {detail.summary}
+                  {detail.metrics.length > 0 && ` ${lang === 'zh' ? '数据来源' : 'Sources'}: ${[...new Set(detail.metrics.map(m => m.source).filter(Boolean))].join(', ')}`}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
