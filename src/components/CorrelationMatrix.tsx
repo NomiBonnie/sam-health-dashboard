@@ -43,7 +43,7 @@ export default function CorrelationMatrix() {
       fetchJson<{ date: string; total_hours: number }[]>('/data/sleep.json')
         .then(data => ({
           name: 'SleepDuration',
-          data: data.map(d => ({ date: d.date, avg: d.total_hours, min: d.total_hours, max: d.total_hours, sum: d.total_hours } as MetricEntry))
+          data: data.filter(d => d.total_hours > 0 && d.total_hours <= 14).map(d => ({ date: d.date, avg: d.total_hours, min: d.total_hours, max: d.total_hours, sum: d.total_hours } as MetricEntry))
         }))
         .catch(() => ({ name: 'SleepDuration', data: [] as MetricEntry[] }))
     ]).then(results => {

@@ -112,7 +112,7 @@ export default function HealthHeatmap() {
       fetchJson<{ date: string; total_hours: number }[]>('/data/sleep.json')
         .then(d => ({
           key: 'SleepDuration' as HeatmapMetric,
-          data: d.map(s => ({ date: s.date, avg: s.total_hours, min: s.total_hours, max: s.total_hours, sum: s.total_hours } as MetricEntry))
+          data: d.filter(s => s.total_hours > 0 && s.total_hours <= 14).map(s => ({ date: s.date, avg: s.total_hours, min: s.total_hours, max: s.total_hours, sum: s.total_hours } as MetricEntry))
         }))
         .catch(() => ({ key: 'SleepDuration' as HeatmapMetric, data: [] as MetricEntry[] }))
     ]).then(results => {

@@ -223,10 +223,12 @@ export default function AnalysisTab() {
 
     // Sleep duration from sleep entries
     if (sleep.length > 0) {
-      const filteredSleep = sleep.filter(s => s.date >= cutoffStr);
-      const sleepData = filteredSleep.length > 0 ? filteredSleep : sleep.slice(-30);
-      const avgSleep = sleepData.reduce((sum, s) => sum + s.total_hours, 0) / sleepData.length;
-      map.SleepDuration = avgSleep;
+      const filteredSleep = sleep.filter(s => s.date >= cutoffStr && s.total_hours > 0 && s.total_hours <= 14);
+      const sleepData = filteredSleep.length > 0 ? filteredSleep : sleep.filter(s => s.total_hours > 0 && s.total_hours <= 14).slice(-30);
+      if (sleepData.length > 0) {
+        const avgSleep = sleepData.reduce((sum, s) => sum + s.total_hours, 0) / sleepData.length;
+        map.SleepDuration = avgSleep;
+      }
     }
     return map;
   };

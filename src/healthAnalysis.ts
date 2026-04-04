@@ -777,7 +777,7 @@ export interface SleepStageAnalysis {
 }
 
 export function analyzeSleepStages(sleepData: { stage_AsleepCore_min?: number; stage_AsleepDeep_min?: number; stage_AsleepREM_min?: number; stage_Awake_min?: number; total_hours: number }[], lang: 'en' | 'zh' = 'en'): SleepStageAnalysis[] {
-  const recent = sleepData.slice(-30).filter(s => s.total_hours > 0);
+  const recent = sleepData.slice(-30).filter(s => s.total_hours > 0 && s.total_hours <= 14);
   if (recent.length === 0) return [];
 
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
