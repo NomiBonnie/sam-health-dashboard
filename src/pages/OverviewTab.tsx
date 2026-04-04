@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ActivityEntry } from '../types';
-import { fetchJson, getMetricDisplayName, getMetricUnit } from '../utils';
+import { fetchJson, getMetricDisplayName, getMetricUnit, isDataFresh } from '../utils';
 import { useLanguage } from '../LanguageContext';
 
 export default function OverviewTab() {
@@ -15,7 +15,9 @@ export default function OverviewTab() {
 
   const keyMetrics = useMemo(() => {
     const keys = ['HeartRate', 'RestingHeartRate', 'StepCount', 'ActiveEnergyBurned', 'VO2Max', 'OxygenSaturation', 'BodyMass', 'HeartRateVariabilitySDNN'];
-    return keys.map(k => inventory.find(i => i.shortName === k)).filter(Boolean) as InventoryItem[];
+    return keys
+      .map(k => inventory.find(i => i.shortName === k))
+      .filter((m): m is InventoryItem => !!m && isDataFresh(m.lastDate, 90))
   }, [inventory]);
 
   const ringStats = useMemo(() => {

@@ -298,17 +298,25 @@ export interface YearComparison {
 
 export function compareYears(
   metricName: string,
-  data: { date: string; avg: number }[],
+  data: { date: string; avg: number; sum?: number }[],
   invertedBetter: boolean = false
 ): YearComparison | null {
   if (!data || data.length === 0) return null;
+
+  // Determine which field to use (sum for cumulative metrics like StepCount, avg for others)
+  const SUM_METRICS = new Set(['StepCount', 'FlightsClimbed', 'ActiveEnergyBurned', 'AppleExerciseTime',
+    'AppleStandTime', 'DistanceWalkingRunning', 'SwimmingStrokeCount', 'DistanceSwimming', 'TimeInDaylight']);
+  const FRACTION_TO_PCT = new Set(['OxygenSaturation', 'BodyFatPercentage', 'WalkingDoubleSupportPercentage',
+    'WalkingAsymmetryPercentage', 'AppleWalkingSteadiness']);
+  const useSum = SUM_METRICS.has(metricName);
 
   // Group by year
   const byYear: Record<number, number[]> = {};
   data.forEach(d => {
     const year = new Date(d.date).getFullYear();
     if (!byYear[year]) byYear[year] = [];
-    if (d.avg > 0) byYear[year].push(d.avg);
+    const val = useSum ? (d.sum ?? d.avg) : d.avg;
+    if (val > 0) byYear[year].push(val);
   });
 
   const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
@@ -321,11 +329,17 @@ export function compareYears(
   const previousValues = byYear[previousYear];
   if (!currentValues?.length || !previousValues?.length) return null;
 
-  const currentAvg = currentValues.reduce((a, b) => a + b, 0) / currentValues.length;
-  const previousAvg = previousValues.reduce((a, b) => a + b, 0) / previousValues.length;
+  let currentAvg = currentValues.reduce((a, b) => a + b, 0) / currentValues.length;
+  let previousAvg = previousValues.reduce((a, b) => a + b, 0) / previousValues.length;
 
   if (previousAvg === 0) return null;
   const change = ((currentAvg - previousAvg) / previousAvg) * 100;
+
+  // Transform for display (fraction → percentage)
+  if (FRACTION_TO_PCT.has(metricName)) {
+    currentAvg = Math.round(currentAvg * 1000) / 10;
+    previousAvg = Math.round(previousAvg * 1000) / 10;
+  }
 
   let direction: YearComparison['direction'];
   if (Math.abs(change) < 2) {
