@@ -4,7 +4,7 @@ export type Language = 'en' | 'zh';
 export const translations = {
   en: {
     // Header
-    siteTitle: "Sam's Health",
+    siteTitle: "SAM'S HEALTH",
     recordsSummary: (total: number, types: number) => `${(total / 1000000).toFixed(1)}M records · ${types} types · 2017–2026`,
     
     // Tabs
@@ -156,7 +156,7 @@ export const translations = {
   
   zh: {
     // Header
-    siteTitle: 'Sam 的健康数据',
+    siteTitle: 'SAM\'S HEALTH',
     recordsSummary: (total: number, types: number) => `${(total / 1000000).toFixed(1)}M 条记录 · ${types} 种类型 · 2017–2026`,
     
     // Tabs
